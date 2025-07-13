@@ -1,26 +1,36 @@
 import { ethers } from 'hardhat';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const unlockTime = currentTimestampInSeconds + 60;
+  // Deploy ENBBountyNft first
+  const treasury = process.env.TREASURY_ADDRESS!;
+  const authority = process.env.AUTHORITY_ADDRESS!;
+  const royaltyFee = process.env.ROYALTY_FEE_NUMERATOR
+    ? parseInt(process.env.ROYALTY_FEE_NUMERATOR)
+    : 0;
 
-  const lockedAmount = ethers.parseEther('0.001');
+  const ENBBountyNft = await ethers.deployContract('ENBBountyNft', [
+    treasury,
+    authority,
+    royaltyFee,
+  ]);
+  await ENBBountyNft.waitForDeployment();
+  console.log(`ENBBountyNft deployed to ${ENBBountyNft.target}`);
 
-  const lock = await ethers.deployContract('Lock', [unlockTime], {
-    value: lockedAmount,
-  });
-
-  await lock.waitForDeployment();
-
-  console.log(
-    `Lock with ${ethers.formatEther(
-      lockedAmount,
-    )}ETH and unlock timestamp ${unlockTime} deployed to ${lock.target}`,
-  );
+  // Deploy ENBBounty with ENBBountyNft address, treasury, and startClaimIndex
+  const startClaimIndex = process.env.START_CLAIM_INDEX
+    ? parseInt(process.env.START_CLAIM_INDEX)
+    : 0;
+  const ENBBounty = await ethers.deployContract('ENBBounty', [
+    ENBBountyNft.target,
+    treasury,
+    startClaimIndex,
+  ]);
+  await ENBBounty.waitForDeployment();
+  console.log(`ENBBounty deployed to ${ENBBounty.target}`);
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
