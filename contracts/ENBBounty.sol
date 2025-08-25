@@ -23,7 +23,7 @@ contract ENBBounty is IERC721Receiver {
     address public immutable treasury;
     IENBBountyNft public immutable ENBBountyNft;
 
-    // Re-emit library events
+    // Re-emit library events for indexer visibility
     event TokenBountyCreated(
         uint256 id,
         address issuer,
@@ -36,6 +36,40 @@ contract ENBBounty is IERC721Receiver {
         uint256 createdAt
     );
 
+    event BountyJoined(uint256 bountyId, address participant, uint256 amount);
+    event BountyCancelled(uint256 bountyId, address issuer);
+    event WithdrawFromOpenBounty(
+        uint256 bountyId,
+        address participant,
+        uint256 amount
+    );
+
+    event ClaimCreated(
+        uint256 id,
+        address issuer,
+        uint256 bountyId,
+        address bountyIssuer,
+        string name,
+        string description,
+        uint256 createdAt
+    );
+
+    event ClaimAccepted(
+        uint256 bountyId,
+        uint256 claimId,
+        address claimIssuer,
+        address bountyIssuer,
+        uint256 fee
+    );
+
+    event ClaimSubmittedForVote(uint256 bountyId, uint256 claimId);
+
+    event VoteClaim(address voter, uint256 bountyId, uint256 claimId);
+
+    event VotingPeriodReset(uint256 bountyId);
+
+    event ResetVotingPeriod(uint256 bountyId);
+
     constructor(
         address _ENBBountyNft,
         address _treasury,
@@ -47,7 +81,16 @@ contract ENBBounty is IERC721Receiver {
         treasury = _treasury;
         bountyStorage.initializeStorage(_startClaimIndex);
 
-        // Do not auto-add tokens; tests add supported tokens explicitly
+        TokenManagementLib.addSupportedToken(
+            bountyStorage,
+            _usdcAddress,
+            BountyStorageLib.TokenType.USDC
+        );
+        TokenManagementLib.addSupportedToken(
+            bountyStorage,
+            _enbAddress,
+            BountyStorageLib.TokenType.ENB
+        );
     }
 
     // Bounty Management Functions

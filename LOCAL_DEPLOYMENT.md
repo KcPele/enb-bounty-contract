@@ -18,12 +18,6 @@ This will start a local blockchain on `http://127.0.0.1:8545` with 20 pre-funded
 
 You have two deployment options:
 
-#### Option A: Basic Deployment (ETH only)
-
-```bash
-npx hardhat run scripts/deploy-local.ts --network localhost
-```
-
 #### Option B: Full Deployment with Mock Tokens (Recommended)
 
 ```bash

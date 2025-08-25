@@ -7,15 +7,6 @@ import './TokenManagementLib.sol';
 library BountyManagementLib {
     using BountyStorageLib for BountyStorageLib.BountyStorage;
 
-    event BountyCreatedWithMaxWinners(
-        uint256 id,
-        address issuer,
-        string name,
-        string description,
-        uint256 amount,
-        uint256 maxWinners,
-        uint256 createdAt
-    );
 
     event TokenBountyCreated(
         uint256 id,
