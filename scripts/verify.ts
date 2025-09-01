@@ -39,7 +39,7 @@ async function main() {
   console.log(`  Treasury: ${treasury}`);
   console.log(`  Authority: ${authority}`);
   console.log(`  Royalty Fee: ${royaltyFee}`);
-  
+
   try {
     await run('verify:verify', {
       address: ENBBountyNftAddress,
@@ -54,26 +54,25 @@ async function main() {
     }
   }
 
-  // ENBBounty verification
+  // ENBBounty verification (constructor: ENBBountyNft, treasury, startClaimIndex)
   const ENBBountyAddress = getArg('ENBBounty', process.env.ENB_BOUNTY_ADDRESS);
-  const platformFee = process.env.PLATFORM_FEE
-    ? parseInt(process.env.PLATFORM_FEE)
-    : 25; // Default 2.5% platform fee
-  const usdcAddress = process.env.USDC_ADDRESS || '0x0000000000000000000000000000000000000000';
-  const enbAddress = process.env.ENB_ADDRESS || '0x0000000000000000000000000000000000000000';
+  // Prefer START_CLAIM_INDEX; fall back to legacy PLATFORM_FEE env if used during deploy
+  const startClaimIndex = process.env.START_CLAIM_INDEX
+    ? parseInt(process.env.START_CLAIM_INDEX)
+    : process.env.PLATFORM_FEE
+      ? parseInt(process.env.PLATFORM_FEE)
+      : 0;
 
   console.log('\nVerifying ENBBounty at:', ENBBountyAddress);
   console.log('Constructor arguments:');
   console.log(`  ENBBountyNft: ${ENBBountyNftAddress}`);
   console.log(`  Treasury: ${treasury}`);
-  console.log(`  Platform Fee: ${platformFee}`);
-  console.log(`  USDC Address: ${usdcAddress}`);
-  console.log(`  ENB Address: ${enbAddress}`);
-  
+  console.log(`  Start Claim Index: ${startClaimIndex}`);
+
   try {
     await run('verify:verify', {
       address: ENBBountyAddress,
-      constructorArguments: [ENBBountyNftAddress, treasury, platformFee, usdcAddress, enbAddress],
+      constructorArguments: [ENBBountyNftAddress, treasury, startClaimIndex],
     });
     console.log('ENBBounty verified successfully!');
   } catch (error: any) {
