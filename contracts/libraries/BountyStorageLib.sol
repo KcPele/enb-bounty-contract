@@ -74,7 +74,7 @@ library BountyStorageLib {
         uint256 _startClaimIndex
     ) internal {
         self.claimCounter = _startClaimIndex;
-        self.votingPeriod = 2 days;
+        self.votingPeriod = 1 days;
 
         for (uint256 i = 0; i < _startClaimIndex; i++) {
             self.claims.push();
