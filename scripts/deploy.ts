@@ -25,23 +25,23 @@ async function main() {
 
   // Deploy ENBBounty with ENBBountyNft address, treasury, startClaimIndex, USDC address, and ENB address
 
-  const platformFee = process.env.PLATFORM_FEE
-    ? parseInt(process.env.PLATFORM_FEE)
-    : 25; // Default 2.5% platform fee
+  const startClaimIndex = process.env.START_CLAIM_INDEX
+    ? parseInt(process.env.START_CLAIM_INDEX)
+    : 0;
   const usdcAddress = process.env.USDC_ADDRESS || ethers.ZeroAddress;
   const enbAddress = process.env.ENB_ADDRESS || ethers.ZeroAddress;
 
   console.log('\nDeploying ENBBounty with parameters:');
   console.log(`  ENBBountyNft: ${ENBBountyNft.target}`);
   console.log(`  Treasury: ${treasury}`);
-  console.log(`  Platform Fee: ${platformFee}`);
+  console.log(`  Start Claim Index: ${startClaimIndex}`);
   console.log(`  USDC Address: ${usdcAddress}`);
   console.log(`  ENB Address: ${enbAddress}`);
 
   const ENBBounty = await ethers.deployContract('ENBBounty', [
     ENBBountyNft.target,
     treasury,
-    platformFee,
+    startClaimIndex,
   ]);
   await ENBBounty.waitForDeployment();
   console.log(`ENBBounty deployed to ${ENBBounty.target}`);
@@ -68,7 +68,7 @@ async function main() {
   console.log(`ENBBounty: ${ENBBounty.target}`);
   console.log(`Treasury: ${treasury}`);
   console.log(`Authority: ${authority}`);
-  console.log(`Platform Fee: ${platformFee}/1000 (${platformFee / 10}%)`);
+  console.log(`Start Claim Index: ${startClaimIndex}`);
   console.log(`Royalty Fee: ${royaltyFee}/10000 (${royaltyFee / 100}%)`);
   console.log(`USDC Address: ${usdcAddress}`);
   console.log(`ENB Address: ${enbAddress}`);

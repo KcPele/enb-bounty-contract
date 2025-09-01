@@ -56,12 +56,10 @@ async function main() {
 
   // ENBBounty verification (constructor: ENBBountyNft, treasury, startClaimIndex)
   const ENBBountyAddress = getArg('ENBBounty', process.env.ENB_BOUNTY_ADDRESS);
-  // Prefer START_CLAIM_INDEX; fall back to legacy PLATFORM_FEE env if used during deploy
+  // Prefer START_CLAIM_INDEX;
   const startClaimIndex = process.env.START_CLAIM_INDEX
     ? parseInt(process.env.START_CLAIM_INDEX)
-    : process.env.PLATFORM_FEE
-      ? parseInt(process.env.PLATFORM_FEE)
-      : 0;
+    : 0;
 
   console.log('\nVerifying ENBBounty at:', ENBBountyAddress);
   console.log('Constructor arguments:');
