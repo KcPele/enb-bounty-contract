@@ -16,6 +16,10 @@ library TokenManagementLib {
     error ETHTransferFailed();
     error ZeroValue();
 
+    // Events for indexer visibility when supported tokens change
+    event SupportedTokenAdded(address token, BountyStorageLib.TokenType tokenType);
+    event SupportedTokenRemoved(address token);
+
     /**
      * @dev Validates and processes token deposit for bounty creation
      * @param self Storage reference
@@ -140,6 +144,7 @@ library TokenManagementLib {
         if (self.supportedTokens[tokenAddress]) revert UnsupportedToken();
         self.supportedTokens[tokenAddress] = true;
         self.tokenAddressTypes[tokenAddress] = tokenType;
+        emit SupportedTokenAdded(tokenAddress, tokenType);
     }
 
     /**
@@ -154,6 +159,7 @@ library TokenManagementLib {
         require(self.supportedTokens[tokenAddress], 'Token not found');
         self.supportedTokens[tokenAddress] = false;
         delete self.tokenAddressTypes[tokenAddress];
+        emit SupportedTokenRemoved(tokenAddress);
     }
 
     /**
