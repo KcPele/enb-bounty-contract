@@ -51,8 +51,6 @@ async function main() {
     ENBBountyNft.target,
     treasury.address,
     platformFee,
-    MockUSDC.target, // USDC address
-    MockENB.target, // ENB address
   ]);
   await ENBBounty.waitForDeployment();
   console.log('ENBBounty deployed to:', ENBBounty.target);
@@ -71,17 +69,23 @@ async function main() {
   console.log('\n=== Configuring Token Support ===');
 
   // // Connect as treasury to add tokens
-  // const ENBBountyAsTreasury = ENBBounty.connect(treasury);
+  const ENBBountyAsTreasury = ENBBounty.connect(treasury);
 
-  // // Add USDC as token type 1
-  // const addUSDCTx = await ENBBountyAsTreasury.addSupportedToken(MockUSDC.target, 1);
-  // await addUSDCTx.wait();
-  // console.log('USDC added as supported token (type 1)');
+  // Add USDC as token type 1
+  const addUSDCTx = await ENBBountyAsTreasury.addSupportedToken(
+    MockUSDC.target,
+    1,
+  );
+  await addUSDCTx.wait();
+  console.log('USDC added as supported token (type 1)');
 
-  // // Add ENB as token type 2
-  // const addENBTx = await ENBBountyAsTreasury.addSupportedToken(MockENB.target, 2);
-  // await addENBTx.wait();
-  // console.log('ENB added as supported token (type 2)');
+  // Add ENB as token type 2
+  const addENBTx = await ENBBountyAsTreasury.addSupportedToken(
+    MockENB.target,
+    2,
+  );
+  await addENBTx.wait();
+  console.log('ENB added as supported token (type 2)');
 
   // Distribute tokens to test accounts for testing
   console.log('\n=== Distributing Test Tokens ===');

@@ -1,19 +1,37 @@
 import { ethers } from 'hardhat';
 import fs from 'fs';
 
-async function main() {
-  console.log('🚀 Starting comprehensive event testing...\n');
-  console.log('='.repeat(60));
+// This script seeds the local chain with comprehensive scenarios
+// covering all ENBBounty functions and events so the indexer/frontend
+// can display a realistic mix of states.
+//
+// Run: npx hardhat run scripts/create-test-all-events.ts --network localhost
 
-  // Load deployment info
+type Addr = string;
+
+async function main() {
+  console.log('🚀 Seeding comprehensive ENB scenarios (all events/states)');
+  console.log('='.repeat(80));
+
+  // Load deployment info written by deploy-local-with-tokens.ts
   const deployment = JSON.parse(
     fs.readFileSync('./deployments/localhost.json', 'utf8'),
   );
 
-  const [deployer, treasury, authority, alice, bob, charlie, david] =
-    await ethers.getSigners();
+  const [
+    deployer,
+    treasury,
+    authority,
+    alice,
+    bob,
+    charlie,
+    david,
+    eve,
+    frank,
+    george,
+    hannah,
+  ] = await ethers.getSigners();
 
-  // Get contract instances
   const ENBBounty = await ethers.getContractAt(
     'ENBBounty',
     deployment.contracts.ENBBounty,
@@ -32,638 +50,357 @@ async function main() {
   );
 
   console.log('📝 Contract Addresses:');
-  console.log('  ENBBounty:', ENBBounty.target);
+  console.log('  ENBBounty   :', ENBBounty.target);
   console.log('  ENBBountyNft:', ENBBountyNft.target);
-  console.log('  MockUSDC:', MockUSDC.target);
-  console.log('  MockENB:', MockENB.target);
-  console.log('\n' + '='.repeat(60) + '\n');
-
-  // Track bounty IDs for later operations
-  const bountyIds: number[] = [];
-  const claimIds: bigint[] = [];
-
-  // Get initial claim counter to track actual claim IDs
-  const initialClaimCounter = await ENBBounty.claimCounter();
-  console.log('Initial claim counter:', initialClaimCounter.toString());
-
-  // ===========================================
-  // SECTION 1: CREATE BOUNTIES (Testing TokenBountyCreated)
-  // ===========================================
-  console.log('📌 SECTION 1: CREATING BOUNTIES\n');
-
-  // 1.1 ETH Solo Bounty (1 winner)
-  console.log('1.1 Creating ETH solo bounty (1 winner)...');
-  const tx1 = await ENBBounty.connect(alice)[
-    'createSoloBounty(string,string,uint256)'
-  ]('Bug Fix Competition', 'Fix the critical payment bug', 1, {
-    value: ethers.parseEther('0.1'),
-  });
-  await tx1.wait();
-  bountyIds.push(0);
-  console.log('   ✅ Bounty #0 created - ETH solo (0.1 ETH, 1 winner)');
-
-  // 1.2 ETH Multi-winner Bounty (3 winners)
-  console.log('1.2 Creating ETH multi-winner bounty (3 winners)...');
-  const tx2 = await ENBBounty.connect(bob)[
-    'createSoloBounty(string,string,uint256)'
-  ]('Meme Contest', 'Create the best Web3 memes', 3, {
-    value: ethers.parseEther('0.3'),
-  });
-  await tx2.wait();
-  bountyIds.push(1);
-  console.log('   ✅ Bounty #1 created - ETH multi (0.3 ETH, 3 winners)');
-
-  // 1.3 USDC Token Bounty
-  console.log('1.3 Creating USDC token bounty...');
-  const usdcAmount = ethers.parseUnits('100', 6);
-  await MockUSDC.connect(alice).approve(ENBBounty.target, usdcAmount);
-  const tx3 = await ENBBounty.connect(alice).createTokenBounty(
-    'Documentation Task',
-    'Write comprehensive API docs',
-    1,
-    MockUSDC.target,
-    usdcAmount,
-    { value: 0 },
-  );
-  await tx3.wait();
-  bountyIds.push(2);
-  console.log('   ✅ Bounty #2 created - USDC token (100 USDC, 1 winner)');
-
-  // 1.4 ENB Token Bounty (2 winners)
-  console.log('1.4 Creating ENB token bounty (2 winners)...');
-  const enbAmount = ethers.parseEther('500');
-  await MockENB.connect(bob).approve(ENBBounty.target, enbAmount);
-  const tx4 = await ENBBounty.connect(bob).createTokenBounty(
-    'Marketing Campaign',
-    'Create viral marketing content',
-    2,
-    MockENB.target,
-    enbAmount,
-    { value: 0 },
-  );
-  await tx4.wait();
-  bountyIds.push(3);
-  console.log('   ✅ Bounty #3 created - ENB token (500 ENB, 2 winners)');
-
-  // 1.5 Open ETH Bounty (5 winners)
-  console.log('1.5 Creating open ETH bounty (5 winners)...');
-  const tx5 = await ENBBounty.connect(alice)[
-    'createOpenBounty(string,string,uint256)'
-  ]('Community Art Project', 'Collaborative digital art', 5, {
-    value: ethers.parseEther('0.05'),
-  });
-  await tx5.wait();
-  bountyIds.push(4);
-  console.log(
-    '   ✅ Bounty #4 created - Open ETH (0.05 ETH initial, 5 winners)',
-  );
-
-  // 1.6 Open USDC Token Bounty (10 winners)
-  console.log('1.6 Creating open USDC bounty (10 winners)...');
-  const openUsdcAmount = ethers.parseUnits('50', 6);
-  await MockUSDC.connect(bob).approve(ENBBounty.target, openUsdcAmount);
-  const tx6 = await ENBBounty.connect(bob).createOpenTokenBounty(
-    'Bug Bounty Program',
-    'Find security vulnerabilities',
-    10,
-    MockUSDC.target,
-    openUsdcAmount,
-    { value: 0 },
-  );
-  await tx6.wait();
-  bountyIds.push(5);
-  console.log(
-    '   ✅ Bounty #5 created - Open USDC (50 USDC initial, 10 winners)',
-  );
-
-  console.log('\n' + '='.repeat(60) + '\n');
-
-  // ===========================================
-  // SECTION 2: JOIN OPEN BOUNTIES (Testing BountyJoined)
-  // ===========================================
-  console.log('📌 SECTION 2: JOINING OPEN BOUNTIES\n');
-
-  // 2.1 Join ETH open bounty (bounty #4 was created by Alice, so others join)
-  console.log('2.1 Charlie joining open ETH bounty #4...');
-  const tx7 = await ENBBounty.connect(charlie).joinOpenBounty(4, {
-    value: ethers.parseEther('0.02'),
-  });
-  await tx7.wait();
-  console.log('   ✅ Charlie joined with 0.02 ETH');
-
-  console.log('2.2 David joining open ETH bounty #4...');
-  const tx8 = await ENBBounty.connect(david).joinOpenBounty(4, {
-    value: ethers.parseEther('0.015'),
-  });
-  await tx8.wait();
-  console.log('   ✅ David joined with 0.015 ETH');
-
-  // 2.2 Join USDC open bounty (bounty #5 was created by Bob, so others join)
-  console.log('2.3 Alice joining open USDC bounty #5...');
-  const joinUsdcAmount = ethers.parseUnits('30', 6);
-  await MockUSDC.connect(alice).approve(ENBBounty.target, joinUsdcAmount);
-  const tx9 = await ENBBounty.connect(alice).joinOpenBountyWithToken(
-    5,
-    joinUsdcAmount,
-    { value: 0 },
-  );
-  await tx9.wait();
-  console.log('   ✅ Alice joined with 30 USDC');
-
-  console.log('\n' + '='.repeat(60) + '\n');
-
-  // ===========================================
-  // SECTION 3: CREATE CLAIMS (Testing ClaimCreated)
-  // ===========================================
-  console.log('📌 SECTION 3: CREATING CLAIMS\n');
-
-  // 3.1 Create claims on bounty #0 (ETH solo)
-  console.log('3.1 Creating claims on bounty #0 (ETH solo)...');
-  const claim1 = await ENBBounty.connect(charlie).createClaim(
-    0,
-    'Bug Fix Solution',
-    'https://example.com/bugfix1',
-    'Fixed the payment processing bug',
-  );
-  await claim1.wait();
-  const claimId0 = initialClaimCounter;
-  claimIds.push(claimId0);
-  console.log(`   ✅ Claim #${claimId0} created by Charlie`);
-
-  const claim2 = await ENBBounty.connect(david).createClaim(
-    0,
-    'Alternative Fix',
-    'https://example.com/bugfix2',
-    'Alternative solution to payment bug',
-  );
-  await claim2.wait();
-  const claimId1 = initialClaimCounter + 1n;
-  claimIds.push(claimId1);
-  console.log(`   ✅ Claim #${claimId1} created by David`);
-
-  // 3.2 Create claims on bounty #1 (ETH multi - 3 winners)
-  console.log('3.2 Creating claims on bounty #1 (ETH multi)...');
-  const claim3 = await ENBBounty.connect(alice).createClaim(
-    1,
-    'Funny DeFi Meme',
-    'https://example.com/meme1',
-    'DeFi degen meme',
-  );
-  await claim3.wait();
-  const claimId2 = initialClaimCounter + 2n;
-  claimIds.push(claimId2);
-  console.log(`   ✅ Claim #${claimId2} created by Alice`);
-
-  const claim4 = await ENBBounty.connect(charlie).createClaim(
-    1,
-    'NFT Joke Meme',
-    'https://example.com/meme2',
-    'NFT market satire',
-  );
-  await claim4.wait();
-  const claimId3 = initialClaimCounter + 3n;
-  claimIds.push(claimId3);
-  console.log(`   ✅ Claim #${claimId3} created by Charlie`);
-
-  const claim5 = await ENBBounty.connect(david).createClaim(
-    1,
-    'Gas Fees Meme',
-    'https://example.com/meme3',
-    'Ethereum gas fees joke',
-  );
-  await claim5.wait();
-  const claimId4 = initialClaimCounter + 4n;
-  claimIds.push(claimId4);
-  console.log(`   ✅ Claim #${claimId4} created by David`);
-
-  const claim6 = await ENBBounty.connect(deployer).createClaim(
-    1,
-    'DAO Governance Meme',
-    'https://example.com/meme4',
-    'DAO voting comedy',
-  );
-  await claim6.wait();
-  const claimId5 = initialClaimCounter + 5n;
-  claimIds.push(claimId5);
-  console.log(`   ✅ Claim #${claimId5} created by Deployer`);
-
-  // 3.3 Create claim on USDC bounty #2
-  console.log('3.3 Creating claim on bounty #2 (USDC)...');
-  const claim7 = await ENBBounty.connect(bob).createClaim(
-    2,
-    'API Documentation',
-    'https://example.com/docs',
-    'Complete API documentation with examples',
-  );
-  await claim7.wait();
-  const claimId6 = initialClaimCounter + 6n;
-  claimIds.push(claimId6);
-  console.log(`   ✅ Claim #${claimId6} created by Bob`);
-
-  console.log('\n' + '='.repeat(60) + '\n');
-
-  // ===========================================
-  // SECTION 4: ACCEPT CLAIMS (Testing ClaimAccepted & Multiple Winners)
-  // ===========================================
-  console.log('📌 SECTION 4: ACCEPTING CLAIMS\n');
-
-  // 4.1 Accept single claim on bounty #0
-  console.log(
-    `4.1 Accepting claim #${claimIds[0]} on bounty #0 (single winner)...`,
-  );
-  const accept1 = await ENBBounty.connect(alice).acceptClaim(0, claimIds[0]);
-  await accept1.wait();
-  console.log(`   ✅ Claim #${claimIds[0]} accepted - Charlie wins bounty #0`);
-
-  // 4.2 Accept multiple claims on bounty #1 (3 winners max)
-  console.log('4.2 Accepting multiple claims on bounty #1 (3 winners)...');
-
-  console.log(`   Accepting claim #${claimIds[2]} (Alice)...`);
-  const accept2 = await ENBBounty.connect(bob).acceptClaim(1, claimIds[2]);
-  await accept2.wait();
-  console.log('   ✅ First winner: Alice');
-
-  console.log(`   Accepting claim #${claimIds[3]} (Charlie)...`);
-  const accept3 = await ENBBounty.connect(bob).acceptClaim(1, claimIds[3]);
-  await accept3.wait();
-  console.log('   ✅ Second winner: Charlie');
-
-  console.log(`   Accepting claim #${claimIds[4]} (David)...`);
-  const accept4 = await ENBBounty.connect(bob).acceptClaim(1, claimIds[4]);
-  await accept4.wait();
-  console.log(
-    '   ✅ Third winner: David - Bounty #1 fully claimed (3/3 winners)',
-  );
-
-  // 4.3 Accept claim on USDC bounty
-  console.log(`4.3 Accepting claim #${claimIds[6]} on bounty #2 (USDC)...`);
-  const accept5 = await ENBBounty.connect(alice).acceptClaim(2, claimIds[6]);
-  await accept5.wait();
-  console.log(`   ✅ Claim #${claimIds[6]} accepted - Bob wins USDC bounty #2`);
-
-  console.log('\n' + '='.repeat(60) + '\n');
-
-  // ===========================================
-  // SECTION 5: VOTING WORKFLOW (Testing ClaimSubmittedForVote, VoteClaim)
-  // ===========================================
-  console.log('📌 SECTION 5: VOTING WORKFLOW\n');
-
-  // 5.1 Create claims on open bounty #4 for voting
-  console.log('5.1 Creating claims on open bounty #4 for voting...');
-  const claim8 = await ENBBounty.connect(david).createClaim(
-    4,
-    'Digital Art Piece 1',
-    'https://example.com/art1',
-    'Abstract digital art',
-  );
-  await claim8.wait();
-  const claimId7 = initialClaimCounter + 7n;
-  claimIds.push(claimId7);
-  console.log(`   ✅ Claim #${claimId7} created by David`);
-
-  // 5.2 Submit claim for vote (must be done by claim issuer - David)
-  console.log(`5.2 Submitting claim #${claimIds[7]} for vote on bounty #4...`);
-  const submitVote = await ENBBounty.connect(david).submitClaimForVote(
-    4,
-    claimIds[7],
-  );
-  await submitVote.wait();
-  console.log(`   ✅ Claim #${claimIds[7]} submitted for voting`);
-
-  // 5.3 Cast votes (only participants can vote - Alice created bounty #4, Charlie and David joined)
-  console.log('5.3 Participants voting on claim #32...');
-
-  console.log('   Alice voting YES...');
-  const vote1 = await ENBBounty.connect(alice).voteClaim(4, true);
-  await vote1.wait();
-  console.log('   ✅ Alice voted YES');
-
-  console.log('   Charlie voting NO...');
-  const vote2 = await ENBBounty.connect(charlie).voteClaim(4, false);
-  await vote2.wait();
-  console.log('   ✅ Charlie voted NO');
-
-  // Note: David can't vote on his own claim
-
-  // 5.4 Advancing time and resolving vote for bounty #4 (weighted by stake)
-  console.log('5.4 Advancing time and resolving vote for bounty #4...');
-  const votingPeriod4 = await ENBBounty.votingPeriod();
-  await ethers.provider.send('evm_increaseTime', [Number(votingPeriod4) + 1]);
-  await ethers.provider.send('evm_mine', []);
-  const resolve4 = await ENBBounty.connect(alice).resolveVote(4);
-  await resolve4.wait();
-  console.log('   ✅ Vote resolved for bounty #4, winning claim accepted');
-
-  console.log('\n' + '='.repeat(60) + '\n');
-
-  // ===========================================
-  // SECTION 6: CANCELLATIONS & WITHDRAWALS
-  // ===========================================
-  console.log('📌 SECTION 6: CANCELLATIONS & WITHDRAWALS\n');
-
-  // 6.1 Create a bounty to cancel
-  console.log('6.1 Creating bounty #6 to test cancellation...');
-  const tx10 = await ENBBounty.connect(david)[
-    'createSoloBounty(string,string,uint256)'
-  ]('To Be Cancelled', 'This bounty will be cancelled', 1, {
-    value: ethers.parseEther('0.05'),
-  });
-  await tx10.wait();
-  console.log('   ✅ Bounty #6 created');
-
-  // 6.2 Cancel the bounty
-  console.log('6.2 Cancelling bounty #6...');
-  const cancel = await ENBBounty.connect(david).cancelSoloBounty(6);
-  await cancel.wait();
-  console.log('   ✅ Bounty #6 cancelled - Funds returned to David');
-
-  // 6.3 Create open bounty for withdrawal test
-  console.log('6.3 Creating open bounty #7 for withdrawal test...');
-  const tx11 = await ENBBounty.connect(alice)[
-    'createOpenBounty(string,string,uint256)'
-  ]('Withdrawal Test', 'Testing withdrawal functionality', 2, {
-    value: ethers.parseEther('0.1'),
-  });
-  await tx11.wait();
-  console.log('   ✅ Bounty #7 created');
-
-  console.log('6.4 Charlie joining bounty #7...');
-  const tx12 = await ENBBounty.connect(charlie).joinOpenBounty(7, {
-    value: ethers.parseEther('0.05'),
-  });
-  await tx12.wait();
-  console.log('   ✅ Charlie joined with 0.05 ETH');
-
-  // 6.5 Withdraw from open bounty
-  console.log('6.5 Charlie withdrawing from bounty #7...');
-  const withdraw = await ENBBounty.connect(charlie).withdrawFromOpenBounty(7);
-  await withdraw.wait();
-  console.log('   ✅ Charlie withdrew 0.05 ETH from bounty #7');
-
-  console.log('\n' + '='.repeat(60) + '\n');
-
-  // ===========================================
-  // SECTION 7: VOTING PERIOD RESET (Testing VotingPeriodReset)
-  // ===========================================
-  console.log('📌 SECTION 7: VOTING PERIOD RESET\n');
-
-  // 7.1 Create another claim for voting
-  console.log('7.1 Creating claim on bounty #5 for voting reset test...');
-  const claim9 = await ENBBounty.connect(charlie).createClaim(
-    5,
-    'Security Vulnerability',
-    'https://example.com/vuln1',
-    'Found reentrancy vulnerability',
-  );
-  await claim9.wait();
-  const claimId8 = initialClaimCounter + 8n;
-  claimIds.push(claimId8);
-  console.log(`   ✅ Claim #${claimId8} created by Charlie`);
-
-  // 7.2 Submit for vote (must be done by claim issuer - Charlie)
-  console.log(`7.2 Submitting claim #${claimIds[8]} for vote...`);
-  const submitVote2 = await ENBBounty.connect(charlie).submitClaimForVote(
-    5,
-    claimIds[8],
-  );
-  await submitVote2.wait();
-  console.log(`   ✅ Claim #${claimIds[8]} submitted for voting`);
-
-  // 7.3 Cast one vote
-  console.log(`7.3 Bob voting on claim #${claimIds[8]}...`);
-  const vote3 = await ENBBounty.connect(bob).voteClaim(5, true);
-  await vote3.wait();
-  console.log('   ✅ Bob voted YES');
-
-  // Advance time beyond voting period to allow reset
-  const currentVotingPeriod = await ENBBounty.votingPeriod();
-  console.log(
-    `   ⏩ Advancing time by ${currentVotingPeriod.toString()} seconds to end voting period...`,
-  );
-  await ethers.provider.send('evm_increaseTime', [
-    Number(currentVotingPeriod) + 1,
-  ]);
-  await ethers.provider.send('evm_mine', []);
-
-  // 7.4 Reset voting period (as issuer)
-  console.log('7.4 Issuer resetting voting period on bounty #5...');
-  const reset = await ENBBounty.connect(bob).resetVotingPeriod(5);
-  await reset.wait();
-  console.log('   ✅ Voting period reset - Previous votes cleared');
-
-  // 7.5 Re-submit the claim for voting after reset
-  console.log(
-    `7.5 Re-submitting claim #${claimIds[8]} for vote after reset...`,
-  );
-  const resubmitVote2 = await ENBBounty.connect(charlie).submitClaimForVote(
-    5,
-    claimIds[8],
-  );
-  await resubmitVote2.wait();
-  console.log('   ✅ Claim resubmitted for voting');
-
-  // 7.6 Cast votes after reset and resolve
-  console.log('7.6 Casting votes after reset on bounty #5...');
-  const voteAfterReset1 = await ENBBounty.connect(alice).voteClaim(5, true);
-  await voteAfterReset1.wait();
-  console.log('   ✅ Alice voted YES');
-
-  const voteAfterReset2 = await ENBBounty.connect(bob).voteClaim(5, true);
-  await voteAfterReset2.wait();
-  console.log('   ✅ Bob voted YES');
-
-  console.log('7.7 Advancing time and resolving vote for bounty #5...');
-  const votingPeriod5 = await ENBBounty.votingPeriod();
-  await ethers.provider.send('evm_increaseTime', [Number(votingPeriod5) + 1]);
-  await ethers.provider.send('evm_mine', []);
-  const resolve5 = await ENBBounty.connect(bob).resolveVote(5);
-  await resolve5.wait();
-  console.log('   ✅ Vote resolved for bounty #5, winning claim accepted');
-
-  console.log('\n' + '='.repeat(60) + '\n');
-
-  // ===========================================
-  // SECTION 8: CANCEL OPEN BOUNTY (Testing BountyCancelled on open bounties)
-  // ===========================================
-  console.log('📌 SECTION 8: CANCEL OPEN BOUNTY (ETH)\n');
-
-  console.log('8.1 Creating open bounty #8 (issuer: Alice)...');
-  const tx12b = await ENBBounty.connect(alice)[
-    'createOpenBounty(string,string,uint256)'
-  ]('Cancel Open Test', 'Open bounty to be cancelled', 2, {
-    value: ethers.parseEther('0.08'),
-  });
-  await tx12b.wait();
-  console.log('   ✅ Bounty #8 created');
-
-  console.log('8.2 Bob joining open bounty #8...');
-  const tx13b = await ENBBounty.connect(bob).joinOpenBounty(8, {
-    value: ethers.parseEther('0.02'),
-  });
-  await tx13b.wait();
-  console.log('   ✅ Bob joined with 0.02 ETH');
-
-  console.log('8.3 Alice cancelling open bounty #8...');
-  const cancelOpen = await ENBBounty.connect(alice).cancelOpenBounty(8);
-  await cancelOpen.wait();
-  console.log('   ✅ Bounty #8 cancelled - Participant refunded');
-
-  console.log('\n' + '='.repeat(60) + '\n');
-
-  // ===========================================
-  // SECTION 9: RESOLVE VOTE (Testing resolve-based acceptance path)
-  // ===========================================
-  console.log('📌 SECTION 9: RESOLVE VOTE\n');
-
-  console.log('9.1 Creating open bounty #9 (issuer: Alice)...');
-  const tx14 = await ENBBounty.connect(alice)[
-    'createOpenBounty(string,string,uint256)'
-  ]('Resolve Vote Test', 'Acceptance via resolveVote', 2, {
-    value: ethers.parseEther('0.06'),
-  });
-  await tx14.wait();
-  console.log('   ✅ Bounty #9 created');
-
-  console.log('9.2 Charlie joining open bounty #9...');
-  const tx15 = await ENBBounty.connect(charlie).joinOpenBounty(9, {
-    value: ethers.parseEther('0.03'),
-  });
-  await tx15.wait();
-  console.log('   ✅ Charlie joined with 0.03 ETH');
-
-  console.log('9.3 David creates claim on bounty #9...');
-  const claim10 = await ENBBounty.connect(david).createClaim(
-    9,
-    'Resolve Claim',
-    'https://example.com/resolve',
-    'Claim to be accepted via resolveVote',
-  );
-  await claim10.wait();
-  const claimId9 = initialClaimCounter + 9n;
-  claimIds.push(claimId9);
-  console.log(`   ✅ Claim #${claimId9} created by David`);
-
-  console.log('9.4 David submits claim for voting on #9...');
-  const submitVote3 = await ENBBounty.connect(david).submitClaimForVote(
-    9,
-    claimIds[9],
-  );
-  await submitVote3.wait();
-  console.log('   ✅ Voting started for claim');
-
-  console.log('9.5 Alice voting YES (has higher stake) ...');
-  const vote4 = await ENBBounty.connect(alice).voteClaim(9, true);
-  await vote4.wait();
-  console.log('   ✅ Alice voted YES');
-
-  console.log('9.6 Charlie voting NO...');
-  const vote5 = await ENBBounty.connect(charlie).voteClaim(9, false);
-  await vote5.wait();
-  console.log('   ✅ Charlie voted NO');
-
-  console.log('9.7 Advancing time to after voting deadline, then resolving...');
-  const votingPeriod9 = await ENBBounty.votingPeriod();
-  await ethers.provider.send('evm_increaseTime', [Number(votingPeriod9) + 1]);
-  await ethers.provider.send('evm_mine', []);
-  const resolveTx = await ENBBounty.connect(alice).resolveVote(9);
-  await resolveTx.wait();
-  console.log('   ✅ Vote resolved, winning claim accepted');
-
-  console.log('\n' + '='.repeat(60) + '\n');
-
-  // ===========================================
-  // SECTION 10: TOKEN WITHDRAWAL ON OPEN BOUNTY (Testing WithdrawFromOpenBounty with tokens)
-  // ===========================================
-  console.log('📌 SECTION 10: TOKEN WITHDRAWAL (USDC)\n');
-
-  console.log('10.1 Creating open USDC bounty #10 (issuer: Bob)...');
-  const openUsdcAmount2 = ethers.parseUnits('40', 6);
-  await MockUSDC.connect(bob).approve(ENBBounty.target, openUsdcAmount2);
-  const tx16 = await ENBBounty.connect(bob).createOpenTokenBounty(
-    'Token Withdraw Test',
-    'Open USDC join and withdraw',
-    3,
-    MockUSDC.target,
-    openUsdcAmount2,
-  );
-  await tx16.wait();
-  console.log('   ✅ Bounty #10 created');
-
-  console.log('10.2 Alice joining bounty #10 with 15 USDC...');
-  const joinUsdcAmount2 = ethers.parseUnits('15', 6);
-  await MockUSDC.connect(alice).approve(ENBBounty.target, joinUsdcAmount2);
-  const tx17 = await ENBBounty.connect(alice).joinOpenBountyWithToken(
-    10,
-    joinUsdcAmount2,
-  );
-  await tx17.wait();
-  console.log('   ✅ Alice joined with 15 USDC');
-
-  console.log('10.3 Alice withdrawing from bounty #10...');
-  const withdraw2 = await ENBBounty.connect(alice).withdrawFromOpenBounty(10);
-  await withdraw2.wait();
-  console.log('   ✅ Alice withdrew 15 USDC from bounty #10');
-
-  console.log('\n' + '='.repeat(60) + '\n');
-
-  // ===========================================
-  // SECTION 11: DEFAULT OPEN BOUNTY OVERLOAD (no maxWinners)
-  // ===========================================
-  console.log('📌 SECTION 11: DEFAULT OPEN BOUNTY OVERLOAD\n');
-
-  console.log(
-    '11.1 Creating open bounty #11 without maxWinners (defaults to 1)...',
-  );
-  const tx18 = await ENBBounty.connect(alice)[
-    'createOpenBounty(string,string)'
-  ]('Default Overload', 'No explicit max winners', {
-    value: ethers.parseEther('0.02'),
-  });
-  await tx18.wait();
-  console.log('   ✅ Bounty #11 created with default 1 winner');
-
-  // ===========================================
-  // SUMMARY
-  // ===========================================
-  console.log('🎉 TEST COMPLETE - EVENT SUMMARY\n');
-  console.log('Events Generated (key types):');
-  console.log('  ✅ BountyCreatedWithMaxWinners');
-  console.log('  ✅ TokenBountyCreated');
-  console.log('  ✅ BountyJoined');
-  console.log('  ✅ ClaimCreated');
-  console.log('  ✅ ClaimAccepted (direct and via resolveVote)');
-  console.log('  ✅ ClaimSubmittedForVote');
-  console.log('  ✅ VoteClaim');
-  console.log('  ✅ BountyCancelled');
-  console.log('  ✅ WithdrawFromOpenBounty');
-  console.log('  ✅ VotingPeriodReset');
-
-  console.log('\nBounties Created:');
-  console.log('  #0: ETH solo (0.1 ETH, 1 winner) - COMPLETED');
-  console.log('  #1: ETH multi (0.3 ETH, 3 winners) - COMPLETED');
-  console.log('  #2: USDC (100 USDC, 1 winner) - COMPLETED');
-  console.log('  #3: ENB (500 ENB, 2 winners) - ACTIVE');
-  console.log('  #4: Open ETH (0.085 ETH, 5 winners) - 1/5 claimed');
-  console.log('  #5: Open USDC (80 USDC, 10 winners) - VOTING');
-  console.log('  #6: ETH solo - CANCELLED');
-  console.log('  #7: Open ETH (0.1 ETH, 2 winners) - ACTIVE');
-
-  console.log('\n' + '='.repeat(60));
-  console.log('✨ All events have been generated successfully!');
-  console.log('\n📋 Contract Addresses Used:');
-  console.log('  ENBBounty:', deployment.contracts.ENBBounty);
+  console.log('  MockUSDC    :', MockUSDC.target);
+  console.log('  MockENB     :', MockENB.target);
+  console.log('-'.repeat(80));
+
+  // Ensure the bounty contract is authorized on the NFT (idempotent)
+  try {
+    await (
+      await ENBBountyNft.connect(authority).setENBBountyContract(
+        ENBBounty.target,
+        true,
+      )
+    ).wait();
+  } catch {}
+
+  // Helper utils
+  const nextClaimId = async (): Promise<bigint> => ENBBounty.claimCounter();
+  const mine = async (secs: number) => {
+    await ethers.provider.send('evm_increaseTime', [secs]);
+    await ethers.provider.send('evm_mine', []);
+  };
+  const approve = async (
+    signer: any,
+    token: any,
+    spender: Addr,
+    amount: bigint,
+  ) => {
+    await (await token.connect(signer).approve(spender, amount)).wait();
+  };
+
+  // Distribute more tokens to participants to ensure approvals succeed
+  const topUpUSDC = ethers.parseUnits('20000', 6);
+  const topUpENB = ethers.parseEther('20000');
+  for (const s of [alice, bob, charlie, david, eve, frank, george, hannah]) {
+    await (await MockUSDC.mint(s.address, topUpUSDC)).wait();
+    await (await MockENB.mint(s.address, topUpENB)).wait();
+  }
+
+  const scenarios: Array<{ id: number; label: string }> = [];
+
+  // 0) Solo ETH bounty (closed: 1/1)
+  await (
+    await ENBBounty.connect(alice)['createSoloBounty(string,string,uint256)'](
+      'Solo ETH Fix',
+      'Fix production bug',
+      1,
+      { value: ethers.parseEther('0.15') },
+    )
+  ).wait();
+  scenarios.push({ id: 0, label: 'SOLO ETH closed (1/1 winners)' });
+  const c0 = await nextClaimId();
+  await (
+    await ENBBounty.connect(charlie).createClaim(
+      0,
+      'Patch v1',
+      'ipfs://QmPatchV1',
+      'Implements a fix',
+    )
+  ).wait();
+  await (await ENBBounty.connect(alice).acceptClaim(0, c0)).wait();
+
+  // 1) Solo ETH with pending claims (open + submissions not yet accepted)
+  await (
+    await ENBBounty.connect(alice)['createSoloBounty(string,string,uint256)'](
+      'Solo ETH Draft',
+      'Evaluate proposals',
+      1,
+      { value: ethers.parseEther('0.1') },
+    )
+  ).wait();
+  scenarios.push({ id: 1, label: 'SOLO ETH open (claims pending)' });
+  await (
+    await ENBBounty.connect(david).createClaim(
+      1,
+      'Draft submission',
+      'ipfs://QmDraft',
+      'Pending review',
+    )
+  ).wait();
+
+  // 2) ETH multi (3 winners), fully claimed (closed)
+  await (
+    await ENBBounty.connect(bob)['createSoloBounty(string,string,uint256)'](
+      'ETH Contest',
+      'Best ideas',
+      3,
+      { value: ethers.parseEther('0.6') },
+    )
+  ).wait();
+  scenarios.push({ id: 2, label: 'ETH multi closed (3/3 winners)' });
+  const c2a = await nextClaimId();
+  await (await ENBBounty.connect(alice).createClaim(2, 'A', 'ipfs://Qa', 'A')).wait();
+  const c2b = c2a + 1n;
+  await (await ENBBounty.connect(charlie).createClaim(2, 'B', 'ipfs://Qb', 'B')).wait();
+  const c2c = c2a + 2n;
+  await (await ENBBounty.connect(david).createClaim(2, 'C', 'ipfs://Qc', 'C')).wait();
+  await (await ENBBounty.connect(bob).acceptClaim(2, c2a)).wait();
+  await (await ENBBounty.connect(bob).acceptClaim(2, c2b)).wait();
+  await (await ENBBounty.connect(bob).acceptClaim(2, c2c)).wait();
+
+  // 3) USDC solo (closed)
+  const usdcSoloAmt = ethers.parseUnits('120', 6);
+  await approve(alice, MockUSDC, ENBBounty.target as Addr, usdcSoloAmt);
+  await (
+    await ENBBounty.connect(alice).createTokenBounty(
+      'USDC Solo',
+      'Docs bounty',
+      1,
+      MockUSDC.target,
+      usdcSoloAmt,
+      { value: 0 },
+    )
+  ).wait();
+  scenarios.push({ id: 3, label: 'USDC solo closed (1/1 winners)' });
+  const c3 = await nextClaimId();
+  await (
+    await ENBBounty.connect(bob).createClaim(
+      3,
+      'Docs v1',
+      'ipfs://Qdocs',
+      'Complete documentation',
+    )
+  ).wait();
+  await (await ENBBounty.connect(alice).acceptClaim(3, c3)).wait();
+
+  // 4) Open ETH bounty (participants join), voting started (isVoting)
+  await (
+    await ENBBounty.connect(alice)['createOpenBounty(string,string,uint256)'](
+      'Open ETH Art',
+      'Community art project',
+      5,
+      { value: ethers.parseEther('0.05') },
+    )
+  ).wait();
+  scenarios.push({ id: 4, label: 'Open ETH voting in progress' });
+  await (
+    await ENBBounty.connect(charlie).joinOpenBounty(4, {
+      value: ethers.parseEther('0.02'),
+    })
+  ).wait();
+  await (
+    await ENBBounty.connect(david).joinOpenBounty(4, {
+      value: ethers.parseEther('0.03'),
+    })
+  ).wait();
+  const c4 = await nextClaimId();
+  await (await ENBBounty.connect(david).createClaim(4, 'Art', 'ipfs://Qart', 'Art')).wait();
+  await (await ENBBounty.connect(david).submitClaimForVote(4, c4)).wait();
+  // Only participants can vote on open ETH bounties; use Charlie and David
+  await (await ENBBounty.connect(charlie).voteClaim(4, true)).wait();
+  await (await ENBBounty.connect(david).voteClaim(4, true)).wait();
+
+  // 5) Open USDC bounty with up to 10 winners, partially accepted
+  const openUsdc = ethers.parseUnits('200', 6);
+  await approve(bob, MockUSDC, ENBBounty.target as Addr, openUsdc);
+  await (
+    await ENBBounty.connect(bob).createOpenTokenBounty(
+      'USDC Bug Bounty',
+      'Find vulns',
+      10,
+      MockUSDC.target,
+      openUsdc,
+    )
+  ).wait();
+  scenarios.push({ id: 5, label: 'Open USDC (10 winners) partial accepted' });
+  await approve(alice, MockUSDC, ENBBounty.target as Addr, ethers.parseUnits('50', 6));
+  await (
+    await ENBBounty.connect(alice).joinOpenBountyWithToken(5, ethers.parseUnits('50', 6))
+  ).wait();
+  const c5a = await nextClaimId();
+  await (await ENBBounty.connect(alice).createClaim(5, 'A', 'ipfs://Qa', 'A')).wait();
+  const c5b = c5a + 1n;
+  await (await ENBBounty.connect(charlie).createClaim(5, 'B', 'ipfs://Qb', 'B')).wait();
+  const c5c = c5a + 2n;
+  await (await ENBBounty.connect(david).createClaim(5, 'C', 'ipfs://Qc', 'C')).wait();
+  const c5d = c5a + 3n;
+  await (await ENBBounty.connect(eve).createClaim(5, 'D', 'ipfs://Qd', 'D')).wait();
+  const c5e = c5a + 4n;
+  await (await ENBBounty.connect(frank).createClaim(5, 'E', 'ipfs://Qe', 'E')).wait();
+  const c5f = c5a + 5n;
+  await (await ENBBounty.connect(charlie).createClaim(5, 'F', 'ipfs://Qf', 'F')).wait();
+  // For open bounties with >1 participant, claims must be accepted via voting.
+  const submitVoteResolve = async (
+    submitter: any,
+    bountyId: number,
+    claimId: bigint,
+  ) => {
+    await (await ENBBounty.connect(submitter).submitClaimForVote(bountyId, claimId)).wait();
+    await (await ENBBounty.connect(alice).voteClaim(bountyId, true)).wait();
+    await (await ENBBounty.connect(bob).voteClaim(bountyId, true)).wait();
+    const vp = await ENBBounty.votingPeriod();
+    await mine(Number(vp) + 1);
+    await (await ENBBounty.connect(bob).resolveVote(bountyId)).wait();
+  };
+
+  await submitVoteResolve(alice, 5, c5a);
+  await submitVoteResolve(charlie, 5, c5b);
+  await submitVoteResolve(david, 5, c5c);
+  await submitVoteResolve(eve, 5, c5d);
+  // Leave some pending (E, F)
+
+  // 6) Open ENB bounty: participants + submissions, no winners yet
+  const enbAmt = ethers.parseEther('300');
+  await approve(alice, MockENB, ENBBounty.target as Addr, enbAmt);
+  await (
+    await ENBBounty.connect(alice).createOpenTokenBounty(
+      'ENB Open',
+      'ENB community work',
+      4,
+      MockENB.target,
+      enbAmt,
+    )
+  ).wait();
+  scenarios.push({ id: 6, label: 'Open ENB (claims, no winners yet)' });
+  await approve(charlie, MockENB, ENBBounty.target as Addr, ethers.parseEther('50'));
+  await (
+    await ENBBounty.connect(charlie).joinOpenBountyWithToken(6, ethers.parseEther('50'))
+  ).wait();
+  await (
+    await ENBBounty.connect(david).createClaim(6, 'Idea', 'ipfs://Qidea', 'Idea')
+  ).wait();
+
+  // 7) Cancel open bounty after participants (refunds)
+  await (
+    await ENBBounty.connect(alice)['createOpenBounty(string,string,uint256)'](
+      'Open to cancel',
+      'Will be cancelled',
+      2,
+      { value: ethers.parseEther('0.08') },
+    )
+  ).wait();
+  scenarios.push({ id: 7, label: 'Open ETH cancelled (refunds)' });
+  await (
+    await ENBBounty.connect(bob).joinOpenBounty(7, { value: ethers.parseEther('0.02') })
+  ).wait();
+  await (await ENBBounty.connect(alice).cancelOpenBounty(7)).wait();
+
+  // 8) Join then withdraw from open bounty (ETH)
+  await (
+    await ENBBounty.connect(bob)['createOpenBounty(string,string,uint256)'](
+      'Join & Withdraw',
+      'Participant will withdraw',
+      2,
+      { value: ethers.parseEther('0.05') },
+    )
+  ).wait();
+  scenarios.push({ id: 8, label: 'Open ETH: joined then withdrew' });
+  await (
+    await ENBBounty.connect(charlie).joinOpenBounty(8, { value: ethers.parseEther('0.05') })
+  ).wait();
+  await (await ENBBounty.connect(charlie).withdrawFromOpenBounty(8)).wait();
+
+  // 9) Voting cycle with reset then resolve
+  await (
+    await ENBBounty.connect(bob)['createOpenBounty(string,string,uint256)'](
+      'Vote Reset',
+      'Reset then resolve',
+      2,
+      { value: ethers.parseEther('0.06') },
+    )
+  ).wait();
+  scenarios.push({ id: 9, label: 'Open ETH: voting reset then resolved' });
+  const c9 = await nextClaimId();
+  await (
+    await ENBBounty.connect(charlie).createClaim(9, 'Reset Claim', 'ipfs://Qreset', 'Reset flow')
+  ).wait();
+  // Ensure voters are participants on bounty #9 (ETH open) BEFORE submitting for vote
+  await (
+    await ENBBounty.connect(alice).joinOpenBounty(9, { value: ethers.parseEther('0.02') })
+  ).wait();
+  // Bob is already a participant as the issuer of an open bounty with initial value.
+  await (await ENBBounty.connect(charlie).submitClaimForVote(9, c9)).wait();
+  await (await ENBBounty.connect(alice).voteClaim(9, true)).wait();
+  const vp9 = await ENBBounty.votingPeriod();
+  await mine(Number(vp9) + 1);
+  await (await ENBBounty.connect(bob).resetVotingPeriod(9)).wait();
+  await (await ENBBounty.connect(charlie).submitClaimForVote(9, c9)).wait();
+  await (await ENBBounty.connect(alice).voteClaim(9, true)).wait();
+  await (await ENBBounty.connect(bob).voteClaim(9, true)).wait();
+  const vp9b = await ENBBounty.votingPeriod();
+  await mine(Number(vp9b) + 1);
+  await (await ENBBounty.connect(bob).resolveVote(9)).wait();
+
+  // 10) Open USDC bounty with 10 winners (fully closed, 10/10)
+  const open10 = ethers.parseUnits('1000', 6);
+  await approve(alice, MockUSDC, ENBBounty.target as Addr, open10);
+  await (
+    await ENBBounty.connect(alice).createOpenTokenBounty(
+      'USDC Mega',
+      '10 winners bounty',
+      10,
+      MockUSDC.target,
+      open10,
+    )
+  ).wait();
+  scenarios.push({ id: 10, label: 'Open USDC closed (10/10 winners)' });
+  // Create 10 claims and accept them all
+  const baseId = await nextClaimId();
+  // Exclude the issuer (alice) from claimers to avoid IssuerCannotClaim
+  const claimers = [
+    bob,
+    charlie,
+    david,
+    eve,
+    frank,
+    deployer,
+    treasury,
+    authority,
+    george,
+    hannah,
+  ];
+  const ids: bigint[] = [];
+  for (let i = 0; i < 10; i++) {
+    const cid = baseId + BigInt(i);
+    await (
+      await ENBBounty.connect(claimers[i]!)
+        .createClaim(10, `C${i + 1}`, `ipfs://Qx${i + 1}`, `Claim ${i + 1}`)
+    ).wait();
+    ids.push(cid);
+  }
+  for (const cid of ids) {
+    await (await ENBBounty.connect(alice).acceptClaim(10, cid)).wait();
+  }
+
+  console.log('\n🎯 Scenarios seeded:');
+  for (const s of scenarios) console.log(`  #${s.id}: ${s.label}`);
+
+  console.log('\n✅ Events exercised:');
+  console.log('  - TokenBountyCreated / create(Open)Bounty(WithToken)');
+  console.log('  - BountyJoined / joinOpenBounty(WithToken)');
+  console.log('  - WithdrawFromOpenBounty');
+  console.log('  - BountyCancelled (open)');
+  console.log('  - ClaimCreated');
+  console.log('  - ClaimSubmittedForVote');
+  console.log('  - VoteClaim');
+  console.log('  - VotingPeriodReset');
+  console.log('  - ClaimAccepted (direct and via resolveVote)');
+
+  console.log('\n📋 Addresses:');
+  console.log('  ENBBounty   :', deployment.contracts.ENBBounty);
   console.log('  ENBBountyNft:', deployment.contracts.ENBBountyNft);
-  console.log('  MockUSDC:', deployment.contracts.MockUSDC);
-  console.log('  MockENB:', deployment.contracts.MockENB);
-  console.log('\nRun the query script to verify indexing.');
-  console.log('='.repeat(60));
+  console.log('  MockUSDC    :', deployment.contracts.MockUSDC);
+  console.log('  MockENB     :', deployment.contracts.MockENB);
+
+  console.log('\n✨ Done. The indexer/frontend should now show a rich mixture of states.');
 }
 
 main()
   .then(() => process.exit(0))
-  .catch((error) => {
-    console.error('Error:', error);
+  .catch((err) => {
+    console.error('Error seeding scenarios:', err);
     process.exit(1);
   });
-
-// to run: npx hardhat run scripts/create-test-all-events.ts --network localhost

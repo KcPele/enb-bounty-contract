@@ -24,6 +24,8 @@ contract ENBBounty is IERC721Receiver {
     IENBBountyNft public immutable ENBBountyNft;
 
     // Re-emit library events for indexer visibility
+    event SupportedTokenAdded(address token, BountyStorageLib.TokenType tokenType);
+    event SupportedTokenRemoved(address token);
     event TokenBountyCreated(
         uint256 id,
         address issuer,
@@ -73,9 +75,7 @@ contract ENBBounty is IERC721Receiver {
     constructor(
         address _ENBBountyNft,
         address _treasury,
-        uint256 _startClaimIndex,
-        address _usdcAddress,
-        address _enbAddress
+        uint256 _startClaimIndex
     ) {
         ENBBountyNft = IENBBountyNft(_ENBBountyNft);
         treasury = _treasury;
