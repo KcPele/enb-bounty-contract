@@ -60,17 +60,27 @@ async function main() {
   const startClaimIndex = process.env.START_CLAIM_INDEX
     ? parseInt(process.env.START_CLAIM_INDEX)
     : 0;
+  const usdcAddress = process.env.USDC_ADDRESS || ZERO_ADDRESS;
+  const enbAddress = process.env.ENB_ADDRESS || ZERO_ADDRESS;
 
   console.log('\nVerifying ENBBounty at:', ENBBountyAddress);
   console.log('Constructor arguments:');
   console.log(`  ENBBountyNft: ${ENBBountyNftAddress}`);
   console.log(`  Treasury: ${treasury}`);
   console.log(`  Start Claim Index: ${startClaimIndex}`);
+  console.log(`  USDC Address: ${usdcAddress}`);
+  console.log(`  ENB Address: ${enbAddress}`);
 
   try {
     await run('verify:verify', {
       address: ENBBountyAddress,
-      constructorArguments: [ENBBountyNftAddress, treasury, startClaimIndex],
+      constructorArguments: [
+        ENBBountyNftAddress,
+        treasury,
+        startClaimIndex,
+        usdcAddress,
+        enbAddress,
+      ],
     });
     console.log('ENBBounty verified successfully!');
   } catch (error: any) {
@@ -86,3 +96,4 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';

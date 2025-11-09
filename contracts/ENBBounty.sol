@@ -75,7 +75,9 @@ contract ENBBounty is IERC721Receiver {
     constructor(
         address _ENBBountyNft,
         address _treasury,
-        uint256 _startClaimIndex
+        uint256 _startClaimIndex,
+        address _usdcAddress,
+        address _enbAddress
     ) {
         ENBBountyNft = IENBBountyNft(_ENBBountyNft);
         treasury = _treasury;
