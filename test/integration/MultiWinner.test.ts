@@ -33,7 +33,6 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
     );
 
     await enbBountyNft.setENBBountyContract(await enbBounty.getAddress(), true);
-    await enbBounty.addSupportedToken(await mockToken.getAddress(), 1);
 
     await mockToken.transfer(alice.address, ethers.parseEther('10000'));
     await mockToken.transfer(bob.address, ethers.parseEther('10000'));

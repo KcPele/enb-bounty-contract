@@ -8,6 +8,8 @@ import '../interfaces/IENBBountyNft.sol';
 library ClaimManagementLib {
     using BountyStorageLib for BountyStorageLib.BountyStorage;
 
+    uint256 internal constant MAX_BATCH_ACCEPT = 10;
+
     event ClaimCreated(
         uint256 id,
         address issuer,
@@ -36,6 +38,13 @@ library ClaimManagementLib {
     error transferFailed();
     error WrongCaller();
     error NotSoloBounty();
+    error NoClaimsProvided();
+    error TooManyClaims(uint256 provided, uint256 maxAllowed);
+    error DuplicateClaimIds();
+
+    function batchAcceptLimit() internal pure returns (uint256) {
+        return MAX_BATCH_ACCEPT;
+    }
 
     function createClaim(
         BountyStorageLib.BountyStorage storage self,
@@ -122,6 +131,58 @@ library ClaimManagementLib {
         }
 
         _acceptClaim(self, bountyNft, treasury, bountyId, claimId);
+    }
+
+    function acceptClaims(
+        BountyStorageLib.BountyStorage storage self,
+        IENBBountyNft bountyNft,
+        address treasury,
+        uint256 bountyId,
+        uint256[] calldata claimIds,
+        address msgSender
+    ) internal {
+        uint256 length = claimIds.length;
+        if (length == 0) revert NoClaimsProvided();
+        if (length > MAX_BATCH_ACCEPT)
+            revert TooManyClaims(length, MAX_BATCH_ACCEPT);
+
+        // Ensure no duplicate claimIds are passed to avoid unnecessary reverts
+        for (uint256 i = 0; i < length; i++) {
+            for (uint256 j = i + 1; j < length; j++) {
+                if (claimIds[i] == claimIds[j]) revert DuplicateClaimIds();
+            }
+        }
+
+        if (bountyId >= self.bountyCounter) revert BountyNotFound();
+        BountyStorageLib.Bounty storage bounty = self.bounties[bountyId];
+        if (bounty.claimer == bounty.issuer) revert BountyClosed();
+
+        address[] memory p = self.participants[bountyId];
+        if (p.length > 1) {
+            uint256 i = 1;
+            do {
+                if (p[i] != address(0)) {
+                    revert NotSoloBounty();
+                }
+                unchecked {
+                    i++;
+                }
+            } while (i < p.length);
+        } else {
+            if (msgSender != bounty.issuer) revert WrongCaller();
+        }
+
+        for (uint256 i = 0; i < length; i++) {
+            uint256 claimId = claimIds[i];
+            if (claimId >= self.claimCounter) revert ClaimNotFound();
+            if (bounty.winnersCount >= bounty.maxWinners) revert BountyClaimed();
+
+            BountyStorageLib.Claim memory claim = self.claims[claimId];
+            if (claim.bountyId != bountyId) revert ClaimNotFound();
+            if (claim.accepted) revert AlreadyWon();
+
+            _acceptClaim(self, bountyNft, treasury, bountyId, claimId);
+        }
     }
 
     function _acceptClaim(
