@@ -11,13 +11,13 @@ async function main() {
   );
 
   const royaltyFee = 500; // 5% royalty
-  const platformFee = 25; // 2.5% platform fee
+  const startClaimIndex = 0; // Optional offset for claim IDs
 
   console.log('\n=== Deployment Parameters ===');
   console.log('Treasury:', treasury.address);
   console.log('Authority:', authority.address);
   console.log('Royalty Fee:', royaltyFee, '(5%)');
-  console.log('Platform Fee:', platformFee, '(2.5%)');
+  console.log('Start Claim Index:', startClaimIndex);
 
   // Deploy Mock USDC Token
   console.log('\n=== Deploying Mock USDC ===');
@@ -50,7 +50,9 @@ async function main() {
   const ENBBounty = await ethers.deployContract('ENBBounty', [
     ENBBountyNft.target,
     treasury.address,
-    platformFee,
+    startClaimIndex,
+    MockUSDC.target,
+    MockENB.target,
   ]);
   await ENBBounty.waitForDeployment();
   console.log('ENBBounty deployed to:', ENBBounty.target);
@@ -66,26 +68,8 @@ async function main() {
   console.log('ENBBounty authorized on ENBBountyNft');
 
   // Add supported tokens to ENBBounty (must be done by treasury)
-  console.log('\n=== Configuring Token Support ===');
-
-  // // Connect as treasury to add tokens
-  const ENBBountyAsTreasury = ENBBounty.connect(treasury);
-
-  // Add USDC as token type 1
-  const addUSDCTx = await ENBBountyAsTreasury.addSupportedToken(
-    MockUSDC.target,
-    1,
-  );
-  await addUSDCTx.wait();
-  console.log('USDC added as supported token (type 1)');
-
-  // Add ENB as token type 2
-  const addENBTx = await ENBBountyAsTreasury.addSupportedToken(
-    MockENB.target,
-    2,
-  );
-  await addENBTx.wait();
-  console.log('ENB added as supported token (type 2)');
+  console.log('\n=== Token Support ===');
+  console.log('USDC and ENB registered during deployment.');
 
   // Distribute tokens to test accounts for testing
   console.log('\n=== Distributing Test Tokens ===');
@@ -116,7 +100,7 @@ async function main() {
   console.log('\n⚙️  Configuration:');
   console.log('  Treasury:', treasury.address);
   console.log('  Authority:', authority.address);
-  console.log('  Platform Fee: 2.5%');
+  console.log('  Start Claim Index:', startClaimIndex);
   console.log('  Royalty Fee: 5%');
 
   console.log('\n💰 Token Distribution:');
@@ -162,8 +146,8 @@ async function main() {
     configuration: {
       treasury: treasury.address,
       authority: authority.address,
-      platformFee: platformFee,
-      royaltyFee: royaltyFee,
+      startClaimIndex,
+      royaltyFee,
     },
     tokenTypes: {
       0: 'ETH (native)',

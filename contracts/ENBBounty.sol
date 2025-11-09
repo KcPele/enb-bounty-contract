@@ -75,11 +75,28 @@ contract ENBBounty is IERC721Receiver {
     constructor(
         address _ENBBountyNft,
         address _treasury,
-        uint256 _startClaimIndex
+        uint256 _startClaimIndex,
+        address _usdcAddress,
+        address _enbAddress
     ) {
         ENBBountyNft = IENBBountyNft(_ENBBountyNft);
         treasury = _treasury;
         bountyStorage.initializeStorage(_startClaimIndex);
+
+        if (_usdcAddress != address(0)) {
+            TokenManagementLib.addSupportedToken(
+                bountyStorage,
+                _usdcAddress,
+                BountyStorageLib.TokenType.USDC
+            );
+        }
+        if (_enbAddress != address(0)) {
+            TokenManagementLib.addSupportedToken(
+                bountyStorage,
+                _enbAddress,
+                BountyStorageLib.TokenType.ENB
+            );
+        }
     }
 
     // Bounty Management Functions
@@ -236,6 +253,19 @@ contract ENBBounty is IERC721Receiver {
         );
     }
 
+    function acceptClaims(
+        uint256 bountyId,
+        uint256[] calldata claimIds
+    ) external {
+        bountyStorage.acceptClaims(
+            ENBBountyNft,
+            treasury,
+            bountyId,
+            claimIds,
+            msg.sender
+        );
+    }
+
     // Voting Functions
     function submitClaimForVote(uint256 bountyId, uint256 claimId) external {
         bountyStorage.submitClaimForVote(bountyId, claimId, msg.sender);
@@ -309,6 +339,10 @@ contract ENBBounty is IERC721Receiver {
         uint256 bountyId
     ) public view returns (uint256) {
         return bountyStorage.getRemainingWinnerSlots(bountyId);
+    }
+
+    function batchAcceptLimit() external pure returns (uint256) {
+        return ClaimManagementLib.batchAcceptLimit();
     }
 
     // Direct storage access for backwards compatibility

@@ -42,6 +42,8 @@ async function main() {
     ENBBountyNft.target,
     treasury,
     startClaimIndex,
+    usdcAddress,
+    enbAddress,
   ]);
   await ENBBounty.waitForDeployment();
   console.log(`ENBBounty deployed to ${ENBBounty.target}`);

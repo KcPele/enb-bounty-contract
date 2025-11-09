@@ -33,7 +33,6 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
     );
 
     await enbBountyNft.setENBBountyContract(await enbBounty.getAddress(), true);
-    await enbBounty.addSupportedToken(await mockToken.getAddress(), 1);
   });
 
   describe('Bounty Creation Validation', function () {

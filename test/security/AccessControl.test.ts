@@ -32,7 +32,6 @@ describe('ENBBounty - Access Control Security Tests', function () {
     );
 
     await enbBountyNft.connect(treasury).setENBBountyContract(await enbBounty.getAddress(), true);
-    await enbBounty.connect(treasury).addSupportedToken(await mockToken.getAddress(), 1);
   });
 
   describe('Owner-Only Functions', function () {

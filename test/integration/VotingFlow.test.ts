@@ -33,7 +33,6 @@ describe('ENBBounty - Voting Flow Integration Tests', function () {
     );
 
     await enbBountyNft.setENBBountyContract(await enbBounty.getAddress(), true);
-    await enbBounty.addSupportedToken(await mockToken.getAddress(), 1);
   });
 
   describe('Complete Voting Lifecycle', function () {
@@ -162,6 +161,7 @@ describe('ENBBounty - Voting Flow Integration Tests', function () {
       await enbBounty.connect(david).createClaim(0, 'Claim 2', 'uri2', 'Second attempt');
 
       await enbBounty.connect(charlie).submitClaimForVote(0, 0);
+      const submissionBlock = await ethers.provider.getBlock('latest');
       await enbBounty.connect(alice).voteClaim(0, false);
       await enbBounty.connect(bob).voteClaim(0, false);
 
@@ -199,7 +199,7 @@ describe('ENBBounty - Voting Flow Integration Tests', function () {
       await enbBounty.connect(david).createClaim(0, 'Claim 2', 'uri2', 'Second');
 
       await enbBounty.connect(charlie).submitClaimForVote(0, 0);
-
+      const submissionBlock = await ethers.provider.getBlock('latest');
       await expect(
         enbBounty.connect(david).submitClaimForVote(0, 1)
       ).to.be.reverted;
@@ -302,22 +302,25 @@ describe('ENBBounty - Voting Flow Integration Tests', function () {
       await enbBounty.connect(bob).joinOpenBounty(0, { value: ethers.parseEther('1') });
       await enbBounty.connect(charlie).createClaim(0, 'Claim', 'uri', 'Description');
       await enbBounty.connect(charlie).submitClaimForVote(0, 0);
+      const submissionBlock = await ethers.provider.getBlock('latest');
 
       await enbBounty.connect(alice).voteClaim(0, true);
       await enbBounty.connect(bob).voteClaim(0, true);
 
-      await expect(
-        enbBounty.resolveVote(0)
-      ).to.be.reverted;
+      await expect(enbBounty.resolveVote(0)).to.be.reverted;
 
-      await ethers.provider.send('evm_increaseTime', [24 * 60 * 60]);
+      const votingPeriod = Number(await enbBounty.votingPeriod());
+
+      await expect(enbBounty.resolveVote(0)).to.be.reverted;
+
+      const halfPeriod = Math.max(Math.floor(votingPeriod / 2), 1);
+      await ethers.provider.send('evm_increaseTime', [halfPeriod]);
       await ethers.provider.send('evm_mine', []);
 
-      await expect(
-        enbBounty.resolveVote(0)
-      ).to.be.reverted;
+      await expect(enbBounty.resolveVote(0)).to.be.reverted;
 
-      await ethers.provider.send('evm_increaseTime', [24 * 60 * 60 + 1]);
+      const remainingPeriod = votingPeriod - halfPeriod + 2;
+      await ethers.provider.send('evm_increaseTime', [remainingPeriod]);
       await ethers.provider.send('evm_mine', []);
 
       await expect(

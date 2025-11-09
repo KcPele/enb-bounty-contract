@@ -32,7 +32,6 @@ describe('ENBBounty - Reentrancy Security Tests', function () {
     );
 
     await enbBountyNft.setENBBountyContract(await enbBounty.getAddress(), true);
-    await enbBounty.addSupportedToken(await mockToken.getAddress(), 1);
   });
 
   describe('Reentrancy Attack Vectors', function () {

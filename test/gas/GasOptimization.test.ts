@@ -31,7 +31,6 @@ describe('ENBBounty - Gas Optimization Tests', function () {
     );
 
     await enbBountyNft.setENBBountyContract(await enbBounty.getAddress(), true);
-    await enbBounty.addSupportedToken(await mockToken.getAddress(), 1);
   });
 
   describe('Gas Usage Measurements', function () {
