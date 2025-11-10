@@ -59,7 +59,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
       const receipt = await tx.wait();
       console.log(`Open bounty creation gas used: ${receipt.gasUsed.toString()}`);
       
-      expect(receipt.gasUsed).to.be.lessThan(350000); // Updated threshold
+      expect(receipt.gasUsed).to.be.lessThan(380000); // Slightly higher after schedule tracking
     });
 
     it('Should measure gas for claim creation', async function () {

@@ -305,6 +305,63 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
     });
   });
 
+  describe('Bounty Schedule Enforcement', function () {
+    it('Should reject claims before the bounty start time', async function () {
+      const currentBlock = await ethers.provider.getBlock('latest');
+      const startTime = Number(currentBlock?.timestamp ?? 0) + 3600;
+      const endTime = startTime + 3600;
+
+      await enbBounty.connect(alice).createSoloBountyWithSchedule(
+        'Scheduled Bounty',
+        'Description',
+        1,
+        startTime,
+        endTime,
+        { value: ethers.parseEther('1') }
+      );
+
+      await expect(
+        enbBounty.connect(bob).createClaim(0, 'Claim', 'uri', 'Description')
+      ).to.be.revertedWithCustomError(enbBounty, 'BountyNotStarted');
+
+      await ethers.provider.send('evm_setNextBlockTimestamp', [startTime + 1]);
+      await ethers.provider.send('evm_mine', []);
+
+      await expect(
+        enbBounty.connect(bob).createClaim(0, 'Claim', 'uri', 'Description')
+      ).to.not.be.reverted;
+    });
+
+    it('Should reject claims after the end time until admin extends it', async function () {
+      const currentBlock = await ethers.provider.getBlock('latest');
+      const startTime = Number(currentBlock?.timestamp ?? 0);
+      const endTime = startTime + 100;
+
+      await enbBounty.connect(alice).createSoloBountyWithSchedule(
+        'Expiring Bounty',
+        'Description',
+        1,
+        startTime,
+        endTime,
+        { value: ethers.parseEther('1') }
+      );
+
+      await ethers.provider.send('evm_setNextBlockTimestamp', [endTime + 1]);
+      await ethers.provider.send('evm_mine', []);
+
+      await expect(
+        enbBounty.connect(bob).createClaim(0, 'Claim', 'uri', 'Description')
+      ).to.be.revertedWithCustomError(enbBounty, 'BountyExpired');
+
+      const extendedEnd = endTime + 1000;
+      await enbBounty.updateBountyEndTime(0, extendedEnd);
+
+      await expect(
+        enbBounty.connect(bob).createClaim(0, 'Claim', 'uri', 'Description')
+      ).to.not.be.reverted;
+    });
+  });
+
   describe('Withdrawal Validation', function () {
     beforeEach(async function () {
       await enbBounty.connect(alice).createOpenBounty(

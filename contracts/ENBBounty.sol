@@ -105,21 +105,24 @@ contract ENBBounty is IERC721Receiver {
         string calldata description,
         uint256 maxWinners
     ) external payable {
-        uint256 adjustedMaxWinners = maxWinners == 0 ? 1 : maxWinners;
-        bountyStorage.createBounty(
-            name,
-            description,
-            adjustedMaxWinners,
-            msg.value,
-            msg.sender
-        );
+        _createSoloBounty(name, description, maxWinners, block.timestamp, 0);
     }
 
     function createSoloBounty(
         string calldata name,
         string calldata description
     ) external payable {
-        bountyStorage.createBounty(name, description, 1, msg.value, msg.sender);
+        _createSoloBounty(name, description, 1, block.timestamp, 0);
+    }
+
+    function createSoloBountyWithSchedule(
+        string calldata name,
+        string calldata description,
+        uint256 maxWinners,
+        uint256 startTime,
+        uint256 endTime
+    ) external payable {
+        _createSoloBounty(name, description, maxWinners, startTime, endTime);
     }
 
     function createOpenBounty(
@@ -127,33 +130,114 @@ contract ENBBounty is IERC721Receiver {
         string calldata description,
         uint256 maxWinners
     ) external payable {
-        uint256 adjustedMaxWinners = maxWinners == 0 ? 1 : maxWinners;
-        uint256 bountyId = bountyStorage.createBounty(
-            name,
-            description,
-            adjustedMaxWinners,
-            msg.value,
-            msg.sender
-        );
-
-        bountyStorage.participants[bountyId].push(msg.sender);
-        bountyStorage.participantAmounts[bountyId].push(msg.value);
+        _createOpenBounty(name, description, maxWinners, block.timestamp, 0);
     }
 
     function createOpenBounty(
         string calldata name,
         string calldata description
     ) external payable {
+        _createOpenBounty(name, description, 1, block.timestamp, 0);
+    }
+
+    function createOpenBountyWithSchedule(
+        string calldata name,
+        string calldata description,
+        uint256 maxWinners,
+        uint256 startTime,
+        uint256 endTime
+    ) external payable {
+        _createOpenBounty(name, description, maxWinners, startTime, endTime);
+    }
+
+    function _createSoloBounty(
+        string calldata name,
+        string calldata description,
+        uint256 maxWinners,
+        uint256 startTime,
+        uint256 endTime
+    ) private {
+        uint256 adjustedMaxWinners = maxWinners == 0 ? 1 : maxWinners;
+        bountyStorage.createBounty(
+            name,
+            description,
+            adjustedMaxWinners,
+            msg.value,
+            msg.sender,
+            startTime,
+            endTime
+        );
+    }
+
+    function _createOpenBounty(
+        string calldata name,
+        string calldata description,
+        uint256 maxWinners,
+        uint256 startTime,
+        uint256 endTime
+    ) private {
+        uint256 adjustedMaxWinners = maxWinners == 0 ? 1 : maxWinners;
         uint256 bountyId = bountyStorage.createBounty(
             name,
             description,
-            1,
+            adjustedMaxWinners,
             msg.value,
-            msg.sender
+            msg.sender,
+            startTime,
+            endTime
         );
 
         bountyStorage.participants[bountyId].push(msg.sender);
         bountyStorage.participantAmounts[bountyId].push(msg.value);
+    }
+
+    function _createTokenBounty(
+        string calldata name,
+        string calldata description,
+        uint256 maxWinners,
+        address tokenAddress,
+        uint256 tokenAmount,
+        uint256 startTime,
+        uint256 endTime
+    ) private {
+        uint256 adjustedMaxWinners = maxWinners == 0 ? 1 : maxWinners;
+        bountyStorage.createTokenBounty(
+            name,
+            description,
+            adjustedMaxWinners,
+            tokenAddress,
+            tokenAmount,
+            msg.value,
+            msg.sender,
+            startTime,
+            endTime
+        );
+    }
+
+    function _createOpenTokenBounty(
+        string calldata name,
+        string calldata description,
+        uint256 maxWinners,
+        address tokenAddress,
+        uint256 tokenAmount,
+        uint256 startTime,
+        uint256 endTime
+    ) private {
+        uint256 adjustedMaxWinners = maxWinners == 0 ? 1 : maxWinners;
+        uint256 bountyId = bountyStorage.createTokenBounty(
+            name,
+            description,
+            adjustedMaxWinners,
+            tokenAddress,
+            tokenAmount,
+            msg.value,
+            msg.sender,
+            startTime,
+            endTime
+        );
+
+        bountyStorage.participants[bountyId].push(msg.sender);
+        bountyStorage.participantAmounts[bountyId].push(tokenAmount);
     }
 
     function joinOpenBounty(uint256 bountyId) external payable {
@@ -168,15 +252,34 @@ contract ENBBounty is IERC721Receiver {
         address tokenAddress,
         uint256 tokenAmount
     ) external payable {
-        uint256 adjustedMaxWinners = maxWinners == 0 ? 1 : maxWinners;
-        bountyStorage.createTokenBounty(
+        _createTokenBounty(
             name,
             description,
-            adjustedMaxWinners,
+            maxWinners,
             tokenAddress,
             tokenAmount,
-            msg.value,
-            msg.sender
+            block.timestamp,
+            0
+        );
+    }
+
+    function createTokenBountyWithSchedule(
+        string calldata name,
+        string calldata description,
+        uint256 maxWinners,
+        address tokenAddress,
+        uint256 tokenAmount,
+        uint256 startTime,
+        uint256 endTime
+    ) external payable {
+        _createTokenBounty(
+            name,
+            description,
+            maxWinners,
+            tokenAddress,
+            tokenAmount,
+            startTime,
+            endTime
         );
     }
 
@@ -187,19 +290,35 @@ contract ENBBounty is IERC721Receiver {
         address tokenAddress,
         uint256 tokenAmount
     ) external payable {
-        uint256 adjustedMaxWinners = maxWinners == 0 ? 1 : maxWinners;
-        uint256 bountyId = bountyStorage.createTokenBounty(
+        _createOpenTokenBounty(
             name,
             description,
-            adjustedMaxWinners,
+            maxWinners,
             tokenAddress,
             tokenAmount,
-            msg.value,
-            msg.sender
+            block.timestamp,
+            0
         );
+    }
 
-        bountyStorage.participants[bountyId].push(msg.sender);
-        bountyStorage.participantAmounts[bountyId].push(tokenAmount);
+    function createOpenTokenBountyWithSchedule(
+        string calldata name,
+        string calldata description,
+        uint256 maxWinners,
+        address tokenAddress,
+        uint256 tokenAmount,
+        uint256 startTime,
+        uint256 endTime
+    ) external payable {
+        _createOpenTokenBounty(
+            name,
+            description,
+            maxWinners,
+            tokenAddress,
+            tokenAmount,
+            startTime,
+            endTime
+        );
     }
 
     function joinOpenBountyWithToken(
@@ -345,6 +464,16 @@ contract ENBBounty is IERC721Receiver {
         return ClaimManagementLib.batchAcceptLimit();
     }
 
+    function getBountySchedule(
+        uint256 bountyId
+    ) external view returns (uint256 startTime, uint256 endTime) {
+        require(bountyId < bountyStorage.bountyCounter, 'Bounty not found');
+        BountyStorageLib.Bounty memory bounty = bountyStorage.bounties[
+            bountyId
+        ];
+        return (bounty.startTime, bounty.endTime);
+    }
+
     // Direct storage access for backwards compatibility
     function bounties(
         uint256 index
@@ -458,6 +587,13 @@ contract ENBBounty is IERC721Receiver {
     modifier onlyOwner() {
         require(msg.sender == treasury, 'Not authorized');
         _;
+    }
+
+    function updateBountyEndTime(
+        uint256 bountyId,
+        uint256 newEndTime
+    ) external onlyOwner {
+        bountyStorage.updateBountyEndTime(bountyId, newEndTime, msg.sender);
     }
 
     function addSupportedToken(

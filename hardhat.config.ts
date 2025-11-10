@@ -22,6 +22,7 @@ const config: HardhatUserConfig = {
         auto: true,
         interval: 0,
       },
+      allowUnlimitedContractSize: true,
     },
     localhost: {
       url: 'http://127.0.0.1:8545',

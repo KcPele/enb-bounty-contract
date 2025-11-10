@@ -27,6 +27,12 @@ library BountyManagementLib {
         address participant,
         uint256 amount
     );
+    event BountyScheduleUpdated(
+        uint256 bountyId,
+        uint256 startTime,
+        uint256 endTime,
+        address updater
+    );
 
     error NoEther();
     error BountyNotFound();
@@ -39,6 +45,7 @@ library BountyManagementLib {
     error transferFailed();
     error IssuerCannotWithdraw();
     error NotAParticipant();
+    error InvalidSchedule();
 
     function createBounty(
         BountyStorageLib.BountyStorage storage self,
@@ -46,7 +53,9 @@ library BountyManagementLib {
         string calldata description,
         uint256 maxWinners,
         uint256 msgValue,
-        address msgSender
+        address msgSender,
+        uint256 startTime,
+        uint256 endTime
     ) internal returns (uint256 bountyId) {
         return
             createTokenBounty(
@@ -57,7 +66,9 @@ library BountyManagementLib {
                 address(0), // ETH
                 msgValue,
                 msgValue,
-                msgSender
+                msgSender,
+                startTime,
+                endTime
             );
     }
 
@@ -69,9 +80,15 @@ library BountyManagementLib {
         address tokenAddress,
         uint256 tokenAmount,
         uint256 msgValue,
-        address msgSender
+        address msgSender,
+        uint256 startTime,
+        uint256 endTime
     ) internal returns (uint256 bountyId) {
         require(maxWinners > 0, 'Must have at least one winner');
+        (uint256 normalizedStart, uint256 normalizedEnd) = _normalizeSchedule(
+            startTime,
+            endTime
+        );
 
         // Process token deposit and validation
         BountyStorageLib.TokenType tokenType = TokenManagementLib
@@ -96,12 +113,21 @@ library BountyManagementLib {
             maxWinners,
             0,
             tokenType,
-            tokenAddress
+            tokenAddress,
+            normalizedStart,
+            normalizedEnd
         );
         self.bounties.push(bounty);
         self.userBounties[msgSender].push(bountyId);
         self.bountyTokenTypes[bountyId] = tokenType;
         ++self.bountyCounter;
+
+        emit BountyScheduleUpdated(
+            bountyId,
+            normalizedStart,
+            normalizedEnd,
+            msgSender
+        );
 
         emit TokenBountyCreated(
             bountyId,
@@ -314,5 +340,42 @@ library BountyManagementLib {
 
         // Revert if the sender was not found in participants list
         if (!found) revert NotAParticipant();
+    }
+
+    function updateBountyEndTime(
+        BountyStorageLib.BountyStorage storage self,
+        uint256 bountyId,
+        uint256 newEndTime,
+        address updater
+    ) internal {
+        if (bountyId >= self.bountyCounter) revert BountyNotFound();
+
+        BountyStorageLib.Bounty storage bounty = self.bounties[bountyId];
+        if (bounty.claimer == bounty.issuer) revert BountyClosed();
+
+        if (newEndTime != 0) {
+            if (newEndTime <= bounty.startTime) revert InvalidSchedule();
+            if (newEndTime <= block.timestamp) revert InvalidSchedule();
+        }
+
+        bounty.endTime = newEndTime;
+        emit BountyScheduleUpdated(
+            bountyId,
+            bounty.startTime,
+            newEndTime,
+            updater
+        );
+    }
+
+    function _normalizeSchedule(
+        uint256 startTime,
+        uint256 endTime
+    ) private view returns (uint256 normalizedStart, uint256 normalizedEnd) {
+        normalizedStart = startTime == 0 ? block.timestamp : startTime;
+        normalizedEnd = endTime;
+
+        if (normalizedEnd != 0 && normalizedEnd <= normalizedStart) {
+            revert InvalidSchedule();
+        }
     }
 }
