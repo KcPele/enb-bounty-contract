@@ -41,6 +41,8 @@ library ClaimManagementLib {
     error NoClaimsProvided();
     error TooManyClaims(uint256 provided, uint256 maxAllowed);
     error DuplicateClaimIds();
+    error BountyNotStarted();
+    error BountyExpired();
 
     function batchAcceptLimit() internal pure returns (uint256) {
         return MAX_BATCH_ACCEPT;
@@ -61,6 +63,9 @@ library ClaimManagementLib {
         if (bounty.claimer == bounty.issuer) revert BountyClosed();
         if (bounty.winnersCount >= bounty.maxWinners) revert BountyClaimed();
         if (bounty.issuer == msgSender) revert IssuerCannotClaim();
+        if (block.timestamp < bounty.startTime) revert BountyNotStarted();
+        if (bounty.endTime != 0 && block.timestamp > bounty.endTime)
+            revert BountyExpired();
 
         uint256 claimId = self.claimCounter;
 

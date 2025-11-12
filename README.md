@@ -22,6 +22,7 @@ Smart contracts that power the Everybody Needs Base bounty marketplace. This pac
   - `acceptClaim(bountyId, claimId)` for single selections.
   - `acceptClaims(bountyId, claimIds[])` for batch approval (up to 10, enforced on-chain via `ClaimManagementLib.MAX_BATCH_ACCEPT`).
   - Open bounties use `submitClaimForVote` + voting logic in `VotingLib`.
+- **Time Windows**: Every bounty now tracks `startTime`/`endTime`; claims are only accepted while active unless the treasury (admin) extends the deadline via `updateBountyEndTime`.
 - **Payouts & Fees**: Rewards split evenly between `maxWinners`, minus a 2.5% treasury fee; library functions handle ETH/ERC‑20 safe transfers.
 - **Storage Model**: `BountyStorageLib` keeps canonical state (bounties, claims, participants, winners) and exposes getter helpers consumed by the main contract.
 

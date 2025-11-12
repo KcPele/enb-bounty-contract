@@ -21,6 +21,8 @@ library BountyStorageLib {
         uint256 winnersCount; // Current number of winners
         TokenType tokenType; // Type of token used for rewards
         address tokenAddress; // Contract address (0x0 for ETH, token contract for ERC20)
+        uint256 startTime; // Timestamp when claims can start
+        uint256 endTime; // Timestamp when claims must stop (0 means no limit)
     }
 
     struct Claim {
