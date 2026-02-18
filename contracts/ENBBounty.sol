@@ -78,6 +78,27 @@ contract ENBBounty {
         );
     }
 
+    function createPositionBounty(
+        string calldata name,
+        string calldata description,
+        address tokenAddress,
+        uint256 tokenAmount,
+        uint256[] calldata positionAmounts,
+        uint256 durationInDays
+    ) external payable {
+        bountyStorage.createPositionBounty(
+            name,
+            description,
+            durationInDays,
+            tokenAddress,
+            tokenAmount,
+            positionAmounts,
+            msg.value,
+            msg.sender,
+            treasury
+        );
+    }
+
     function cancelSoloBounty(uint bountyId) external {
         bountyStorage.cancelSoloBounty(bountyId, msg.sender);
     }
@@ -189,6 +210,30 @@ contract ENBBounty {
 
     function bountyCounter() public view returns (uint256) {
         return bountyStorage.bountyCounter;
+    }
+
+    // Position-based bounty view functions
+    function isBountyPositionBased(uint256 bountyId) external view returns (bool) {
+        require(bountyId < bountyStorage.bountyCounter, 'Bounty not found');
+        return bountyStorage.isPositionBased[bountyId];
+    }
+
+    function getBountyPositionAmount(
+        uint256 bountyId,
+        uint256 positionIndex
+    ) external view returns (uint256) {
+        return bountyStorage.bountyPositionAmounts[bountyId][positionIndex];
+    }
+
+    function getBountyAllPositionAmounts(
+        uint256 bountyId
+    ) external view returns (uint256[] memory amounts) {
+        require(bountyId < bountyStorage.bountyCounter, 'Bounty not found');
+        uint256 count = bountyStorage.bounties[bountyId].maxWinners;
+        amounts = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            amounts[i] = bountyStorage.bountyPositionAmounts[bountyId][i];
+        }
     }
 
     // Token Management Functions (Owner only)

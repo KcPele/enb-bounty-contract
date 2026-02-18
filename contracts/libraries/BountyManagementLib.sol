@@ -20,6 +20,19 @@ library BountyManagementLib {
         uint256 deadline
     );
 
+    event PositionBountyCreated(
+        uint256 indexed id,
+        address indexed issuer,
+        string name,
+        string description,
+        uint256 totalAmount,
+        uint256 positionCount,
+        BountyStorageLib.TokenType tokenType,
+        address tokenAddress,
+        uint256 createdAt,
+        uint256 deadline
+    );
+
     event CreationFeeCharged(uint256 bountyId, address payer, uint256 fee);
     event BountyCancelled(uint256 bountyId, address issuer);
 
@@ -30,6 +43,9 @@ library BountyManagementLib {
     error BountyClaimed();
     error transferFailed();
     error InvalidDuration();
+    error ETHNotAllowedForPositionBounty();
+    error PositionAmountsRequired();
+    error PositionAmountsMismatch();
 
     function createBounty(
         BountyStorageLib.BountyStorage storage self,
@@ -163,6 +179,96 @@ library BountyManagementLib {
         }
     }
 
+    function createPositionBounty(
+        BountyStorageLib.BountyStorage storage self,
+        string calldata name,
+        string calldata description,
+        uint256 durationInDays,
+        address tokenAddress,
+        uint256 tokenAmount,
+        uint256[] calldata positionAmounts,
+        uint256 msgValue,
+        address msgSender,
+        address treasury
+    ) internal returns (uint256 bountyId) {
+        if (tokenAddress == address(0)) revert ETHNotAllowedForPositionBounty();
+        if (positionAmounts.length == 0) revert PositionAmountsRequired();
+        if (durationInDays == 0) revert InvalidDuration();
+
+        uint256 sum;
+        for (uint256 i = 0; i < positionAmounts.length; i++) {
+            require(positionAmounts[i] > 0, 'Position amount must be > 0');
+            sum += positionAmounts[i];
+        }
+        if (sum != tokenAmount) revert PositionAmountsMismatch();
+
+        uint256 maxWinners = positionAmounts.length;
+
+        // ERC20: creation fee is extra on top of tokenAmount
+        uint256 creationFee = (tokenAmount * self.creationFeeRate) /
+            BountyStorageLib.FEE_DENOMINATOR;
+
+        TokenManagementLib.processTokenDeposit(
+            self,
+            tokenAddress,
+            tokenAmount,
+            msgValue,
+            msgSender
+        );
+
+        if (creationFee > 0) {
+            TokenManagementLib.transferERC20FromSender(
+                tokenAddress,
+                msgSender,
+                treasury,
+                creationFee
+            );
+        }
+
+        bountyId = self.bountyCounter;
+        uint256 deadline = block.timestamp + (durationInDays * 1 days);
+
+        BountyStorageLib.Bounty memory bounty = BountyStorageLib.Bounty(
+            bountyId,
+            msgSender,
+            name,
+            description,
+            tokenAmount,
+            block.timestamp,
+            deadline,
+            maxWinners,
+            0,
+            false,
+            self.tokenAddressTypes[tokenAddress],
+            tokenAddress
+        );
+        self.bounties.push(bounty);
+        self.userBounties[msgSender].push(bountyId);
+        ++self.bountyCounter;
+
+        self.isPositionBased[bountyId] = true;
+        for (uint256 i = 0; i < positionAmounts.length; i++) {
+            self.bountyPositionAmounts[bountyId][i] = positionAmounts[i];
+        }
+
+        emit PositionBountyCreated(
+            bountyId,
+            msgSender,
+            name,
+            description,
+            tokenAmount,
+            maxWinners,
+            bounty.tokenType,
+            tokenAddress,
+            block.timestamp,
+            deadline
+        );
+
+        if (creationFee > 0) {
+            emit CreationFeeCharged(bountyId, msgSender, creationFee);
+        }
+    }
+
     function cancelSoloBounty(
         BountyStorageLib.BountyStorage storage self,
         uint256 bountyId,
@@ -174,9 +280,16 @@ library BountyManagementLib {
         if (bounty.cancelled) revert BountyClosed();
         if (msgSender != bounty.issuer) revert WrongCaller();
 
-        uint256 paidOut = (bounty.amount / bounty.maxWinners) *
-            bounty.winnersCount;
-        uint256 refundAmount = bounty.amount - paidOut;
+        uint256 refundAmount;
+        if (self.isPositionBased[bountyId]) {
+            for (uint256 i = bounty.winnersCount; i < bounty.maxWinners; i++) {
+                refundAmount += self.bountyPositionAmounts[bountyId][i];
+            }
+        } else {
+            uint256 paidOut = (bounty.amount / bounty.maxWinners) *
+                bounty.winnersCount;
+            refundAmount = bounty.amount - paidOut;
+        }
         bounty.cancelled = true;
 
         if (refundAmount > 0) {

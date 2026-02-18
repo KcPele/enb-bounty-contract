@@ -20,6 +20,15 @@ library ClaimManagementLib {
         uint256 totalFee
     );
 
+    event PositionClaimAccepted(
+        uint256 indexed bountyId,
+        address indexed claimer,
+        address bountyIssuer,
+        uint256 positionIndex,
+        uint256 positionAmount,
+        uint256 fee
+    );
+
     error BountyNotFound();
     error BountyClosed();
     error BountyClaimed();
@@ -51,12 +60,19 @@ library ClaimManagementLib {
         if (self.hasWon[bountyId][claimer]) revert AlreadyWon();
 
         // Calculate payout per winner
-        uint256 payoutPerWinner = bounty.amount / bounty.maxWinners;
+        bool isPosition = self.isPositionBased[bountyId];
+        uint256 payoutPerWinner;
+        if (isPosition) {
+            payoutPerWinner = self.bountyPositionAmounts[bountyId][bounty.winnersCount];
+        } else {
+            payoutPerWinner = bounty.amount / bounty.maxWinners;
+        }
         uint256 fee = (payoutPerWinner * self.platformFeeRate) /
             BountyStorageLib.FEE_DENOMINATOR;
         uint256 payout = payoutPerWinner - fee;
 
         // Update state
+        uint256 positionIndex = bounty.winnersCount;
         bounty.winnersCount++;
         self.bountyWinners[bountyId].push(claimer);
         self.hasWon[bountyId][claimer] = true;
@@ -77,7 +93,11 @@ library ClaimManagementLib {
             fee
         );
 
-        emit ClaimAccepted(bountyId, claimer, bounty.issuer, fee);
+        if (isPosition) {
+            emit PositionClaimAccepted(bountyId, claimer, bounty.issuer, positionIndex, payoutPerWinner, fee);
+        } else {
+            emit ClaimAccepted(bountyId, claimer, bounty.issuer, fee);
+        }
     }
 
     function batchAcceptClaims(
@@ -103,11 +123,7 @@ library ClaimManagementLib {
             revert BatchExceedsMaxWinners();
         if (msgSender != bounty.issuer) revert WrongCaller();
 
-        // Cache payout calculations
-        uint256 payoutPerWinner = bounty.amount / bounty.maxWinners;
-        uint256 feePerWinner = (payoutPerWinner * self.platformFeeRate) /
-            BountyStorageLib.FEE_DENOMINATOR;
-        uint256 netPayout = payoutPerWinner - feePerWinner;
+        bool isPosition = self.isPositionBased[bountyId];
         uint256 initialWinnersCount = bounty.winnersCount;
 
         // STATE UPDATES LOOP (effects before interactions)
@@ -125,7 +141,19 @@ library ClaimManagementLib {
         bounty.winnersCount = initialWinnersCount + claimers.length;
 
         // EXTERNAL CALLS LOOP (interactions)
+        uint256 totalFee;
         for (uint256 i = 0; i < claimers.length; i++) {
+            uint256 winnerPayout;
+            if (isPosition) {
+                winnerPayout = self.bountyPositionAmounts[bountyId][initialWinnersCount + i];
+            } else {
+                winnerPayout = bounty.amount / bounty.maxWinners;
+            }
+            uint256 feeForWinner = (winnerPayout * self.platformFeeRate) /
+                BountyStorageLib.FEE_DENOMINATOR;
+            uint256 netPayout = winnerPayout - feeForWinner;
+            totalFee += feeForWinner;
+
             TokenManagementLib.transferTokens(
                 bounty.tokenType,
                 bounty.tokenAddress,
@@ -133,16 +161,26 @@ library ClaimManagementLib {
                 netPayout
             );
 
-            emit ClaimAccepted(
-                bountyId,
-                claimers[i],
-                bounty.issuer,
-                feePerWinner
-            );
+            if (isPosition) {
+                emit PositionClaimAccepted(
+                    bountyId,
+                    claimers[i],
+                    bounty.issuer,
+                    initialWinnersCount + i,
+                    winnerPayout,
+                    feeForWinner
+                );
+            } else {
+                emit ClaimAccepted(
+                    bountyId,
+                    claimers[i],
+                    bounty.issuer,
+                    feeForWinner
+                );
+            }
         }
 
         // Single treasury transfer for accumulated fees
-        uint256 totalFee = feePerWinner * claimers.length;
         TokenManagementLib.transferTokens(
             bounty.tokenType,
             bounty.tokenAddress,

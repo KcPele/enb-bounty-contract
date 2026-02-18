@@ -6,7 +6,8 @@ library BountyStorageLib {
     enum TokenType {
         ETH,
         USDC,
-        ENB
+        ENB,
+        CUSTOM
     }
 
     struct Bounty {
@@ -38,6 +39,9 @@ library BountyStorageLib {
         // Fee configuration
         uint256 platformFeeRate;
         uint256 creationFeeRate;
+        // Position-based reward fields
+        mapping(uint256 => bool) isPositionBased;
+        mapping(uint256 => mapping(uint256 => uint256)) bountyPositionAmounts;
     }
 
     function initializeStorage(BountyStorage storage self) internal {

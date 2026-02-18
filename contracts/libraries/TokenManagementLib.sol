@@ -158,7 +158,7 @@ library TokenManagementLib {
             tokenType != BountyStorageLib.TokenType.ETH,
             'Cannot add ETH as ERC20'
         );
-        if (self.supportedTokens[tokenAddress]) revert UnsupportedToken();
+        require(!self.supportedTokens[tokenAddress], 'Token already supported');
         self.supportedTokens[tokenAddress] = true;
         self.tokenAddressTypes[tokenAddress] = tokenType;
         emit SupportedTokenAdded(tokenAddress, tokenType);
