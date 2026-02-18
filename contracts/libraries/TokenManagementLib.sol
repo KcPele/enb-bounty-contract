@@ -86,6 +86,23 @@ library TokenManagementLib {
     }
 
     /**
+     * @dev Transfers ERC20 tokens from sender directly to a recipient (e.g., for fees)
+     * @param tokenAddress Token contract address
+     * @param sender Address to transfer from
+     * @param recipient Address to transfer to
+     * @param amount Amount to transfer
+     */
+    function transferERC20FromSender(
+        address tokenAddress,
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal {
+        if (amount == 0) return;
+        IERC20(tokenAddress).safeTransferFrom(sender, recipient, amount);
+    }
+
+    /**
      * @dev Gets contract balance for specified token
      * @param tokenType Type of token
      * @param tokenAddress Token contract address (ignored for ETH)

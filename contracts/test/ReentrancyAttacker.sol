@@ -2,33 +2,25 @@
 pragma solidity 0.8.19;
 
 interface IENBBounty {
-    function acceptClaim(uint256 bountyId, uint256 claimId) external;
-    function createClaim(
-        uint256 bountyId,
-        string memory name,
-        string memory uri,
-        string memory description
-    ) external;
+    function acceptClaim(uint256 bountyId, address claimer) external;
 }
 
 contract ReentrancyAttacker {
     IENBBounty public target;
     uint256 public attackCount;
     bool public reentered;
+    address public self;
 
     constructor(address _target) {
         target = IENBBounty(_target);
-    }
-
-    function createClaim(uint256 bountyId) external {
-        target.createClaim(bountyId, 'Attack', 'uri', 'desc');
+        self = address(this);
     }
 
     receive() external payable {
         if (attackCount < 2) {
             attackCount++;
             // Attempt reentrancy
-            try target.acceptClaim(0, 0) {
+            try target.acceptClaim(0, self) {
                 reentered = true;
             } catch {}
         }

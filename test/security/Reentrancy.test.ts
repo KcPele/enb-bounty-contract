@@ -5,7 +5,6 @@ import { expect } from 'chai';
 
 describe('ENBBounty - Reentrancy Security Tests', function () {
   let enbBounty: Contract;
-  let enbBountyNft: Contract;
   let attacker: Contract;
   let mockToken: Contract;
   let owner: SignerWithAddress;
@@ -16,22 +15,12 @@ describe('ENBBounty - Reentrancy Security Tests', function () {
   beforeEach(async function () {
     [owner, alice, bob, eve] = await ethers.getSigners();
 
-    const ENBBountyNft = await ethers.getContractFactory('ENBBountyNft');
-    enbBountyNft = await ENBBountyNft.deploy(owner.address, owner.address, '500');
-
     const MockERC20 = await ethers.getContractFactory('MockERC20');
     mockToken = await MockERC20.deploy('Mock Token', 'MTK', ethers.parseEther('1000000'));
 
     const ENBBounty = await ethers.getContractFactory('ENBBounty');
-    enbBounty = await ENBBounty.deploy(
-      await enbBountyNft.getAddress(),
-      owner.address,
-      0,
-      await mockToken.getAddress(),
-      ethers.ZeroAddress
-    );
+    enbBounty = await ENBBounty.deploy(owner.address);
 
-    await enbBountyNft.setENBBountyContract(await enbBounty.getAddress(), true);
     await enbBounty.addSupportedToken(await mockToken.getAddress(), 1);
   });
 
@@ -44,25 +33,25 @@ describe('ENBBounty - Reentrancy Security Tests', function () {
         'Test Bounty',
         'Description',
         1,
+        30,
         { value: ethers.parseEther('1') }
       );
 
-      await attacker.createClaim(0);
+      const attackerAddress = await attacker.getAddress();
+      const attackerBalanceBefore = await ethers.provider.getBalance(attackerAddress);
 
-      const attackerBalanceBefore = await ethers.provider.getBalance(await attacker.getAddress());
-      
-      // The transaction might succeed but reentrancy should fail
-      await enbBounty.connect(alice).acceptClaim(0, 0);
-      
-      const attackerBalanceAfter = await ethers.provider.getBalance(await attacker.getAddress());
+      await enbBounty.connect(alice).acceptClaim(0, attackerAddress);
+
+      const attackerBalanceAfter = await ethers.provider.getBalance(attackerAddress);
       const received = attackerBalanceAfter - attackerBalanceBefore;
-      
-      // Attacker should only receive the legitimate payout (minus fee)
-      const expectedPayout = ethers.parseEther('1') - (ethers.parseEther('1') * 25n / 1000n);
+
+      // Bounty amount after 15% creation fee: 1e18 * 1000 / 1150
+      const bountyAmount = ethers.parseEther('1') * 1000n / 1150n;
+      const platformFee = bountyAmount * 100n / 1000n;
+      const expectedPayout = bountyAmount - platformFee;
       expect(received).to.equal(expectedPayout);
-      
-      // Check that reentrancy didn't succeed
-      const attackerContract = await ethers.getContractAt('ReentrancyAttacker', await attacker.getAddress());
+
+      const attackerContract = await ethers.getContractAt('ReentrancyAttacker', attackerAddress);
       expect(await attackerContract.reentered()).to.be.false;
     });
 
@@ -73,25 +62,9 @@ describe('ENBBounty - Reentrancy Security Tests', function () {
       await malicious.createBountyAndCancel({ value: ethers.parseEther('1') });
 
       const balance = await ethers.provider.getBalance(await malicious.getAddress());
-      // Should get refund but no extra funds from reentrancy
-      expect(balance).to.be.closeTo(ethers.parseEther('1'), ethers.parseEther('0.01'));
-    });
-
-    it('Should prevent reentrancy during withdrawFromOpenBounty', async function () {
-      const MaliciousWithdrawer = await ethers.getContractFactory('MaliciousWithdrawer');
-      const malicious = await MaliciousWithdrawer.deploy(await enbBounty.getAddress());
-
-      await enbBounty.connect(alice).createOpenBounty(
-        'Open Bounty',
-        'Description',
-        1,
-        { value: ethers.parseEther('1') }
-      );
-
-      await malicious.joinAndWithdraw(0, { value: ethers.parseEther('0.5') });
-
-      const bountyData = await enbBounty.bounties(0);
-      expect(bountyData.amount).to.equal(ethers.parseEther('1'));
+      // Bounty amount after 15% creation fee: 1e18 * 1000 / 1150
+      const expectedRefund = ethers.parseEther('1') * 1000n / 1150n;
+      expect(balance).to.be.closeTo(expectedRefund, ethers.parseEther('0.01'));
     });
 
     it('Should handle multiple claim acceptance without reentrancy', async function () {
@@ -99,24 +72,15 @@ describe('ENBBounty - Reentrancy Security Tests', function () {
         'Multi Winner Bounty',
         'Description',
         3,
+        30,
         { value: ethers.parseEther('3') }
       );
 
-      for (let i = 0; i < 3; i++) {
-        const signer = [bob, eve, owner][i];
-        await enbBounty.connect(signer).createClaim(
-          0,
-          `Claim ${i}`,
-          `uri${i}`,
-          `Description ${i}`
-        );
-      }
+      await enbBounty.connect(alice).acceptClaim(0, bob.address);
+      await enbBounty.connect(alice).acceptClaim(0, eve.address);
 
-      await enbBounty.connect(alice).acceptClaim(0, 0);
-      await enbBounty.connect(alice).acceptClaim(0, 1);
-      
       await expect(
-        enbBounty.connect(alice).acceptClaim(0, 0)
+        enbBounty.connect(alice).acceptClaim(0, bob.address)
       ).to.be.reverted;
     });
 
@@ -127,9 +91,8 @@ describe('ENBBounty - Reentrancy Security Tests', function () {
       await crossAttacker.performCrossAttack({ value: ethers.parseEther('2') });
 
       const attackerBalance = await ethers.provider.getBalance(await crossAttacker.getAddress());
-      // Should have received normal payouts but no extra from reentrancy
-      // Two bounties created with 1 ETH each, both might be processed normally
-      expect(attackerBalance).to.be.closeTo(ethers.parseEther('1.95'), ethers.parseEther('0.1'));
+      // Should have received normal refunds but no extra from reentrancy
+      expect(attackerBalance).to.be.closeTo(ethers.parseEther('1.75'), ethers.parseEther('0.1'));
     });
   });
 
@@ -139,39 +102,19 @@ describe('ENBBounty - Reentrancy Security Tests', function () {
         'Test Bounty',
         'Description',
         2,
+        30,
         { value: ethers.parseEther('2') }
       );
 
-      await enbBounty.connect(bob).createClaim(0, 'Claim 1', 'uri1', 'Desc1');
-      await enbBounty.connect(alice).acceptClaim(0, 0);
+      await enbBounty.connect(alice).acceptClaim(0, bob.address);
 
       const bountyData = await enbBounty.bounties(0);
       expect(bountyData.winnersCount).to.equal(1);
     });
 
-    it('Should maintain participant list integrity during withdrawal reentrancy', async function () {
-      await enbBounty.connect(alice).createOpenBounty(
-        'Open Bounty',
-        'Description',
-        1,
-        { value: ethers.parseEther('1') }
-      );
-
-      await enbBounty.connect(bob).joinOpenBounty(0, { value: ethers.parseEther('0.5') });
-
-      const [participants, amounts] = await enbBounty.getParticipants(0);
-      const initialLength = participants.length;
-
-      await enbBounty.connect(bob).withdrawFromOpenBounty(0);
-
-      const [participantsAfter, amountsAfter] = await enbBounty.getParticipants(0);
-      expect(participantsAfter[1]).to.equal(ethers.ZeroAddress);
-      expect(amountsAfter[1]).to.equal(0);
-    });
-
     it('Should prevent double spending in token bounties', async function () {
       await mockToken.transfer(alice.address, ethers.parseEther('100'));
-      await mockToken.connect(alice).approve(await enbBounty.getAddress(), ethers.parseEther('100'));
+      await mockToken.connect(alice).approve(await enbBounty.getAddress(), ethers.parseEther('115'));
 
       await enbBounty.connect(alice).createTokenBounty(
         'Token Bounty',
@@ -179,13 +122,12 @@ describe('ENBBounty - Reentrancy Security Tests', function () {
         1,
         await mockToken.getAddress(),
         ethers.parseEther('10'),
+        30,
         { value: 0 }
       );
 
-      await enbBounty.connect(bob).createClaim(0, 'Claim', 'uri', 'Desc');
-
       const aliceBalanceBefore = await mockToken.balanceOf(alice.address);
-      await enbBounty.connect(alice).acceptClaim(0, 0);
+      await enbBounty.connect(alice).acceptClaim(0, bob.address);
       const aliceBalanceAfter = await mockToken.balanceOf(alice.address);
 
       expect(aliceBalanceBefore).to.equal(aliceBalanceAfter);
@@ -198,35 +140,32 @@ describe('ENBBounty - Reentrancy Security Tests', function () {
         'Test Bounty',
         'Description',
         1,
+        30,
         { value: ethers.parseEther('1') }
       );
 
-      await enbBounty.connect(bob).createClaim(0, 'Claim', 'uri', 'Desc');
-
-      const tx = await enbBounty.connect(alice).acceptClaim(0, 0);
+      const tx = await enbBounty.connect(alice).acceptClaim(0, bob.address);
       const receipt = await tx.wait();
 
-      // Check that events were emitted (state was updated before transfers)
       expect(receipt.logs.length).to.be.greaterThan(0);
-      
-      // Verify claim was accepted
-      const claim = await enbBounty.claims(0);
-      expect(claim.accepted).to.be.true;
+      expect(await enbBounty.hasAddressWon(0, bob.address)).to.be.true;
     });
 
     it('Should properly handle failed external calls', async function () {
       const FailingReceiver = await ethers.getContractFactory('FailingReceiver');
       const failingContract = await FailingReceiver.deploy();
 
-      await failingContract.createBounty(await enbBounty.getAddress(), {
-        value: ethers.parseEther('1')
-      });
+      await enbBounty.connect(alice).createSoloBounty(
+        'Test Bounty',
+        'Description',
+        1,
+        30,
+        { value: ethers.parseEther('1') }
+      );
 
-      await enbBounty.connect(bob).createClaim(0, 'Claim', 'uri', 'Desc');
-
-      await expect(
-        failingContract.acceptClaim(0, 0)
-      ).to.be.reverted;
+      const failingAddress = await failingContract.getAddress();
+      await enbBounty.connect(alice).acceptClaim(0, failingAddress);
+      expect(await enbBounty.hasAddressWon(0, failingAddress)).to.be.true;
     });
   });
 });

@@ -6,10 +6,10 @@ import "./BountyStorageLib.sol";
 library BountyGettersLib {
     using BountyStorageLib for BountyStorageLib.BountyStorage;
 
-    function getBountiesLength(BountyStorageLib.BountyStorage storage self) 
-        internal 
-        view 
-        returns (uint256) 
+    function getBountiesLength(BountyStorageLib.BountyStorage storage self)
+        internal
+        view
+        returns (uint256)
     {
         return self.bounties.length;
     }
@@ -28,22 +28,6 @@ library BountyGettersLib {
         }
     }
 
-    function getClaimsByBountyId(
-        BountyStorageLib.BountyStorage storage self,
-        uint256 bountyId
-    ) internal view returns (BountyStorageLib.Claim[] memory) {
-        uint256[] memory bountyClaimIndexes = self.bountyClaims[bountyId];
-        BountyStorageLib.Claim[] memory bountyClaimsArray = new BountyStorageLib.Claim[](
-            bountyClaimIndexes.length
-        );
-
-        for (uint256 i = 0; i < bountyClaimIndexes.length; i++) {
-            bountyClaimsArray[i] = self.claims[bountyClaimIndexes[i]];
-        }
-
-        return bountyClaimsArray;
-    }
-
     function getBountiesByUser(
         BountyStorageLib.BountyStorage storage self,
         address user,
@@ -59,48 +43,11 @@ library BountyGettersLib {
         }
     }
 
-    function getClaimsByUser(
-        BountyStorageLib.BountyStorage storage self,
-        address user
-    ) internal view returns (BountyStorageLib.Claim[] memory) {
-        uint256[] storage userClaimIndexes = self.userClaims[user];
-        BountyStorageLib.Claim[] memory userClaimsArray = new BountyStorageLib.Claim[](
-            userClaimIndexes.length
-        );
-
-        for (uint256 i = 0; i < userClaimIndexes.length; i++) {
-            userClaimsArray[i] = self.claims[userClaimIndexes[i]];
-        }
-
-        return userClaimsArray;
-    }
-
-    function getParticipants(
-        BountyStorageLib.BountyStorage storage self,
-        uint256 bountyId
-    ) internal view returns (address[] memory, uint256[] memory) {
-        address[] memory p = self.participants[bountyId];
-        uint256[] memory a = self.participantAmounts[bountyId];
-        uint256 pLength = p.length;
-
-        address[] memory result = new address[](pLength);
-        uint256[] memory amounts = new uint256[](pLength);
-
-        for (uint256 i = 0; i < pLength; i++) {
-            result[i] = p[i];
-            amounts[i] = a[i];
-        }
-
-        return (result, amounts);
-    }
-
     function getBountyWinners(
         BountyStorageLib.BountyStorage storage self,
         uint256 bountyId
-    ) internal view returns (address[] memory winners, uint256[] memory claimIds) {
-        winners = self.bountyWinners[bountyId];
-        claimIds = self.bountyWinningClaims[bountyId];
-        return (winners, claimIds);
+    ) internal view returns (address[] memory) {
+        return self.bountyWinners[bountyId];
     }
 
     function hasAddressWon(

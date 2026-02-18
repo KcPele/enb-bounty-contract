@@ -124,10 +124,11 @@ contract MaliciousRefundReceiver {
     function createBountyAndCancel() external payable {
         (bool success, ) = bountyContract.call{value: msg.value}(
             abi.encodeWithSignature(
-                'createSoloBounty(string,string,uint256)',
+                'createSoloBounty(string,string,uint256,uint256)',
                 'Attack Bounty',
                 'Description',
-                uint256(1)
+                uint256(1),
+                uint256(30)
             )
         );
         require(success, 'Failed to create bounty');
@@ -195,20 +196,22 @@ contract CrossReentrancyAttacker {
     function performCrossAttack() external payable {
         (bool success, ) = bountyContract.call{value: msg.value / 2}(
             abi.encodeWithSignature(
-                'createSoloBounty(string,string,uint256)',
+                'createSoloBounty(string,string,uint256,uint256)',
                 'Attack Bounty 1',
                 'Description',
-                uint256(1)
+                uint256(1),
+                uint256(30)
             )
         );
         require(success, 'Failed to create first bounty');
 
         (success, ) = bountyContract.call{value: msg.value / 2}(
             abi.encodeWithSignature(
-                'createSoloBounty(string,string,uint256)',
+                'createSoloBounty(string,string,uint256,uint256)',
                 'Attack Bounty 2',
                 'Description',
-                uint256(1)
+                uint256(1),
+                uint256(30)
             )
         );
         require(success, 'Failed to create second bounty');
@@ -237,22 +240,23 @@ contract FailingReceiver {
         bountyContract = _bountyContract;
         (bool success, ) = bountyContract.call{value: msg.value}(
             abi.encodeWithSignature(
-                'createSoloBounty(string,string,uint256)',
+                'createSoloBounty(string,string,uint256,uint256)',
                 'Test Bounty',
                 'Description',
-                uint256(1)
+                uint256(1),
+                uint256(30)
             )
         );
         require(success, 'Failed to create bounty');
     }
 
-    function acceptClaim(uint256 bountyId, uint256 claimId) external {
+    function acceptClaim(uint256 bountyId, address claimer) external {
         shouldFail = true;
         (bool success, ) = bountyContract.call(
             abi.encodeWithSignature(
-                'acceptClaim(uint256,uint256)',
+                'acceptClaim(uint256,address)',
                 bountyId,
-                claimId
+                claimer
             )
         );
         require(success, 'Accept claim failed');

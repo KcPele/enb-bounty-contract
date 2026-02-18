@@ -3,75 +3,25 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 async function main() {
-  // Deploy ENBBountyNft first
   const treasury = process.env.TREASURY_ADDRESS!;
-  const authority = process.env.AUTHORITY_ADDRESS!;
-  const royaltyFee = process.env.ROYALTY_FEE_NUMERATOR
-    ? parseInt(process.env.ROYALTY_FEE_NUMERATOR)
-    : 500; // Default 5% royalty
+  if (!treasury) throw new Error('TREASURY_ADDRESS not set');
 
-  console.log('Deploying ENBBountyNft with parameters:');
+  console.log('Deploying ENBBounty with parameters:');
   console.log(`  Treasury: ${treasury}`);
-  console.log(`  Authority: ${authority}`);
-  console.log(`  Royalty Fee: ${royaltyFee}`);
 
-  const ENBBountyNft = await ethers.deployContract('ENBBountyNft', [
-    treasury,
-    authority,
-    royaltyFee,
-  ]);
-  await ENBBountyNft.waitForDeployment();
-  console.log(`ENBBountyNft deployed to ${ENBBountyNft.target}`);
-
-  // Deploy ENBBounty with ENBBountyNft address, treasury, startClaimIndex, USDC address, and ENB address
-
-  const startClaimIndex = process.env.START_CLAIM_INDEX
-    ? parseInt(process.env.START_CLAIM_INDEX)
-    : 0;
-  const usdcAddress = process.env.USDC_ADDRESS || ethers.ZeroAddress;
-  const enbAddress = process.env.ENB_ADDRESS || ethers.ZeroAddress;
-
-  console.log('\nDeploying ENBBounty with parameters:');
-  console.log(`  ENBBountyNft: ${ENBBountyNft.target}`);
-  console.log(`  Treasury: ${treasury}`);
-  console.log(`  Start Claim Index: ${startClaimIndex}`);
-  console.log(`  USDC Address: ${usdcAddress}`);
-  console.log(`  ENB Address: ${enbAddress}`);
-
-  const ENBBounty = await ethers.deployContract('ENBBounty', [
-    ENBBountyNft.target,
-    treasury,
-    startClaimIndex,
-  ]);
+  const ENBBounty = await ethers.deployContract('ENBBounty', [treasury]);
   await ENBBounty.waitForDeployment();
   console.log(`ENBBounty deployed to ${ENBBounty.target}`);
 
-  // Set ENBBounty as authorized contract on ENBBountyNft: manually done in the explorer
-  // console.log('\nSetting ENBBounty as authorized contract on ENBBountyNft...');
-  const setTx = await ENBBountyNft.setENBBountyContract(ENBBounty.target, true);
-  await setTx.wait();
-  // Add USDC as token type 1
-  // const addUSDCTx = await ENBBounty.addSupportedToken(usdcAddress, 1);
-  // await addUSDCTx.wait();
-  // console.log('USDC added as supported token (type 1)');
+  // Log fee config
+  const platformFee = await ENBBounty.platformFeeRate();
+  const creationFee = await ENBBounty.creationFeeRate();
+  console.log(`Platform fee: ${platformFee}/1000 (${Number(platformFee) / 10}%)`);
+  console.log(`Creation fee: ${creationFee}/1000 (${Number(creationFee) / 10}%)`);
 
-  // // Add ENB as token type 2
-  // const addENBTx = await ENBBounty.addSupportedToken(enbAddress, 2);
-  // await addENBTx.wait();
-  // console.log('ENB added as supported token (type 2)');
-
-  console.log('Authorization complete!');
-
-  // Log deployment summary
   console.log('\n=== Deployment Summary ===');
-  console.log(`ENBBountyNft: ${ENBBountyNft.target}`);
   console.log(`ENBBounty: ${ENBBounty.target}`);
   console.log(`Treasury: ${treasury}`);
-  console.log(`Authority: ${authority}`);
-  console.log(`Start Claim Index: ${startClaimIndex}`);
-  console.log(`Royalty Fee: ${royaltyFee}/10000 (${royaltyFee / 100}%)`);
-  console.log(`USDC Address: ${usdcAddress}`);
-  console.log(`ENB Address: ${enbAddress}`);
 }
 
 main().catch((error) => {
