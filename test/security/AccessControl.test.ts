@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { Contract } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 
 describe('ENBBounty - Access Control Security Tests', function () {
@@ -19,32 +19,33 @@ describe('ENBBounty - Access Control Security Tests', function () {
     mockToken = await MockERC20.deploy('Mock Token', 'MTK', ethers.parseEther('1000000'));
 
     const ENBBounty = await ethers.getContractFactory('ENBBounty');
-    enbBounty = await ENBBounty.deploy(treasury.address);
+    enbBounty = await upgrades.deployProxy(ENBBounty, [treasury.address], { kind: 'uups' });
 
-    await enbBounty.connect(treasury).addSupportedToken(await mockToken.getAddress(), 1);
+    // owner (deployer) is the OwnableUpgradeable owner, not treasury
+    await enbBounty.connect(owner).addSupportedToken(await mockToken.getAddress(), 1);
   });
 
   describe('Owner-Only Functions', function () {
-    it('Should only allow treasury to add supported tokens', async function () {
+    it('Should only allow owner to add supported tokens', async function () {
       const newToken = await ethers.getContractFactory('MockERC20');
       const token = await newToken.deploy('New Token', 'NTK', ethers.parseEther('1000'));
 
       await expect(
         enbBounty.connect(alice).addSupportedToken(await token.getAddress(), 2)
-      ).to.be.revertedWith('Not authorized');
+      ).to.be.revertedWith('Ownable: caller is not the owner');
 
       await expect(
-        enbBounty.connect(treasury).addSupportedToken(await token.getAddress(), 2)
+        enbBounty.connect(owner).addSupportedToken(await token.getAddress(), 2)
       ).to.not.be.reverted;
     });
 
-    it('Should only allow treasury to remove supported tokens', async function () {
+    it('Should only allow owner to remove supported tokens', async function () {
       await expect(
         enbBounty.connect(alice).removeSupportedToken(await mockToken.getAddress())
-      ).to.be.revertedWith('Not authorized');
+      ).to.be.revertedWith('Ownable: caller is not the owner');
 
       await expect(
-        enbBounty.connect(treasury).removeSupportedToken(await mockToken.getAddress())
+        enbBounty.connect(owner).removeSupportedToken(await mockToken.getAddress())
       ).to.not.be.reverted;
     });
 
@@ -52,12 +53,24 @@ describe('ENBBounty - Access Control Security Tests', function () {
       const currentTreasury = await enbBounty.treasury();
       expect(currentTreasury).to.equal(treasury.address);
 
+      // Only owner can update treasury
       await expect(
-        alice.sendTransaction({
-          to: await enbBounty.getAddress(),
-          data: ethers.zeroPadValue(alice.address, 32)
-        })
-      ).to.be.reverted;
+        enbBounty.connect(alice).updateTreasury(alice.address)
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+
+      await expect(
+        enbBounty.connect(owner).updateTreasury(alice.address)
+      ).to.not.be.reverted;
+
+      expect(await enbBounty.treasury()).to.equal(alice.address);
+    });
+
+    it('Should only allow owner to upgrade', async function () {
+      const ENBBountyV2 = await ethers.getContractFactory('ENBBounty');
+
+      await expect(
+        upgrades.upgradeProxy(await enbBounty.getAddress(), ENBBountyV2.connect(alice), { kind: 'uups' })
+      ).to.be.revertedWith('Ownable: caller is not the owner');
     });
   });
 
@@ -68,6 +81,7 @@ describe('ENBBounty - Access Control Security Tests', function () {
         'Description',
         1,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 
@@ -86,6 +100,7 @@ describe('ENBBounty - Access Control Security Tests', function () {
         'Description',
         1,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 
@@ -104,6 +119,7 @@ describe('ENBBounty - Access Control Security Tests', function () {
         'Description',
         1,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 

@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { Contract } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 
 describe('ENBBounty - Input Validation & Edge Cases', function () {
@@ -20,7 +20,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
     mockToken = await MockERC20.deploy('Mock Token', 'MTK', ethers.parseEther('1000000'));
 
     const ENBBounty = await ethers.getContractFactory('ENBBounty');
-    enbBounty = await ENBBounty.deploy(owner.address);
+    enbBounty = await upgrades.deployProxy(ENBBounty, [owner.address], { kind: 'uups' });
 
     await enbBounty.addSupportedToken(await mockToken.getAddress(), 1);
   });
@@ -32,6 +32,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
         'Description',
         0,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 
@@ -46,6 +47,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
           'Description',
           1,
           30,
+          0,
           { value: 0 }
         )
       ).to.be.revertedWithCustomError(enbBounty, 'ZeroValue');
@@ -57,6 +59,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
           'Zero Duration Bounty',
           'Description',
           1,
+          0,
           0,
           { value: ethers.parseEther('1') }
         )
@@ -73,6 +76,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
           longDescription,
           1,
           30,
+          0,
           { value: ethers.parseEther('1') }
         )
       ).to.not.be.reverted;
@@ -89,6 +93,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
           '',
           1,
           30,
+          0,
           { value: ethers.parseEther('1') }
         )
       ).to.not.be.reverted;
@@ -106,6 +111,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
         'Description',
         maxUint256,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 
@@ -121,6 +127,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
         specialChars,
         1,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 
@@ -135,6 +142,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
         'Description',
         1,
         durationInDays,
+        0,
         { value: ethers.parseEther('1') }
       );
       const receipt = await tx.wait();
@@ -152,6 +160,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
         'Description',
         1,
         durationInDays,
+        0,
         { value: ethers.parseEther('1') }
       );
       const receipt = await tx.wait();
@@ -181,6 +190,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
           unsupportedToken,
           ethers.parseEther('10'),
           30,
+          0,
           { value: 0 }
         )
       ).to.be.revertedWithCustomError(enbBounty, 'TokenNotSupported');
@@ -195,6 +205,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
           await mockToken.getAddress(),
           0,
           30,
+          0,
           { value: 0 }
         )
       ).to.be.revertedWithCustomError(enbBounty, 'ZeroValue');
@@ -209,6 +220,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
           await mockToken.getAddress(),
           ethers.parseEther('1000'),
           30,
+          0,
           { value: 0 }
         )
       ).to.be.reverted;
@@ -225,6 +237,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
           await mockToken.getAddress(),
           ethers.parseEther('10'),
           30,
+          0,
           { value: 0 }
         )
       ).to.be.reverted;
@@ -238,6 +251,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
         'Description',
         2,
         30,
+        0,
         { value: ethers.parseEther('2') }
       );
     });
@@ -277,6 +291,7 @@ describe('ENBBounty - Input Validation & Edge Cases', function () {
           `Description ${i}`,
           1,
           30,
+          0,
           { value: ethers.parseEther('0.01') }
         );
       }

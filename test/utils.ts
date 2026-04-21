@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { Contract } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 
 type Bounty = {
   name: string;
@@ -17,6 +17,15 @@ export const compareBountyData = (testBounty: Bounty, evmBounty: Bounty) => {
   expect(testBounty.amount).to.equal(evmBountyAmount);
 };
 
+export const deployENBBounty = async (treasuryAddress: string) => {
+  const ENBBounty = await ethers.getContractFactory('ENBBounty');
+  const proxy = await upgrades.deployProxy(ENBBounty, [treasuryAddress], {
+    kind: 'uups',
+  });
+  await proxy.waitForDeployment();
+  return proxy;
+};
+
 export const createSoloBounty = async (
   poidhV2: Contract,
   name: string,
@@ -24,7 +33,7 @@ export const createSoloBounty = async (
   amount: string,
   durationInDays: number = 30,
 ) => {
-  await poidhV2.createSoloBounty(name, description, 1, durationInDays, {
+  await poidhV2.createSoloBounty(name, description, 1, durationInDays, 0, {
     value: ethers.parseEther(amount),
   });
 };

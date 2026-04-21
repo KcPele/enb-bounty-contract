@@ -42,6 +42,10 @@ library BountyStorageLib {
         // Position-based reward fields
         mapping(uint256 => bool) isPositionBased;
         mapping(uint256 => mapping(uint256 => uint256)) bountyPositionAmounts;
+        // Review period per bounty (seconds)
+        mapping(uint256 => uint256) bountyReviewPeriod;
+        // Reserved storage gap for future upgrades
+        uint256[49] __gap;
     }
 
     function initializeStorage(BountyStorage storage self) internal {

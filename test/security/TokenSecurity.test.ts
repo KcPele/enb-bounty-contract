@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { Contract } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 
 describe('ENBBounty - Token Security Tests', function () {
@@ -19,7 +19,7 @@ describe('ENBBounty - Token Security Tests', function () {
     mockToken = await MockERC20.deploy('Mock Token', 'MTK', ethers.parseEther('1000000'));
 
     const ENBBounty = await ethers.getContractFactory('ENBBounty');
-    enbBounty = await ENBBounty.deploy(owner.address);
+    enbBounty = await upgrades.deployProxy(ENBBounty, [owner.address], { kind: 'uups' });
 
     await enbBounty.addSupportedToken(await mockToken.getAddress(), 1);
 
@@ -42,6 +42,7 @@ describe('ENBBounty - Token Security Tests', function () {
         await mockToken.getAddress(),
         ethers.parseEther('100'),
         30,
+        0,
         { value: 0 }
       );
 
@@ -62,6 +63,7 @@ describe('ENBBounty - Token Security Tests', function () {
           await mockToken.getAddress(),
           ethers.parseEther('100'),
           30,
+          0,
           { value: 0 }
         )
       ).to.be.reverted;
@@ -79,6 +81,7 @@ describe('ENBBounty - Token Security Tests', function () {
           await mockToken.getAddress(),
           ethers.parseEther('100'),
           30,
+          0,
           { value: 0 }
         )
       ).to.be.reverted;
@@ -94,6 +97,7 @@ describe('ENBBounty - Token Security Tests', function () {
         await mockToken.getAddress(),
         ethers.parseEther('100'),
         30,
+        0,
         { value: 0 }
       );
 
@@ -129,6 +133,7 @@ describe('ENBBounty - Token Security Tests', function () {
           await maliciousToken.getAddress(),
           ethers.parseEther('100'),
           30,
+          0,
           { value: 0 }
         )
       ).to.be.reverted;
@@ -150,6 +155,7 @@ describe('ENBBounty - Token Security Tests', function () {
           await weirdToken.getAddress(),
           ethers.parseEther('100'),
           30,
+          0,
           { value: 0 }
         )
       ).to.not.be.reverted;
@@ -163,6 +169,7 @@ describe('ENBBounty - Token Security Tests', function () {
         'Description',
         1,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 
@@ -180,6 +187,7 @@ describe('ENBBounty - Token Security Tests', function () {
         await mockToken.getAddress(),
         ethers.parseEther('100'),
         30,
+        0,
         { value: 0 }
       );
 
@@ -200,6 +208,7 @@ describe('ENBBounty - Token Security Tests', function () {
         await mockToken.getAddress(),
         ethers.parseEther('100'),
         30,
+        0,
         { value: 0 }
       );
 
@@ -260,6 +269,7 @@ describe('ENBBounty - Token Security Tests', function () {
         await mockToken.getAddress(),
         ethers.parseEther('1000'),
         30,
+        0,
         { value: 0 }
       );
 
@@ -288,6 +298,7 @@ describe('ENBBounty - Token Security Tests', function () {
         await mockToken.getAddress(),
         '100',
         30,
+        0,
         { value: 0 }
       );
 

@@ -1,0 +1,347 @@
+{
+  "manifestVersion": "3.2",
+  "proxies": [
+    {
+      "address": "0x33b310b8f3e0aB653C94c5737372C6004007218E",
+      "txHash": "0x4ade93e60243cdc829216523f1f9a5127ca11cf86062482bb2017ae32bff238c",
+      "kind": "uups"
+    }
+  ],
+  "impls": {
+    "cbb84f430b8b22306f9423e76303dc9eb5514770a471cd9779d33d527aa3641f": {
+      "address": "0xa3D6F7515C21c73ac03c19326946C7F19552a7E6",
+      "txHash": "0xa9ddf6dd145fc2c70a9889be4fa000bafe7229ae9361d502da70f4dd787c4029",
+      "layout": {
+        "solcVersion": "0.8.19",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC1967UpgradeUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/ERC1967/ERC1967UpgradeUpgradeable.sol:169"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "UUPSUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol:111"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:40"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "bountyStorage",
+            "offset": 0,
+            "slot": "201",
+            "type": "t_struct(BountyStorage)4261_storage",
+            "contract": "ENBBounty",
+            "src": "contracts/ENBBounty.sol:26"
+          },
+          {
+            "label": "treasury",
+            "offset": 0,
+            "slot": "263",
+            "type": "t_address",
+            "contract": "ENBBounty",
+            "src": "contracts/ENBBounty.sol:28"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_struct(Bounty)4205_storage)dyn_storage": {
+            "label": "struct BountyStorageLib.Bounty[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_array(t_uint256)dyn_storage": {
+            "label": "uint256[]",
+            "numberOfBytes": "32"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_enum(TokenType)4179": {
+            "label": "enum BountyStorageLib.TokenType",
+            "members": [
+              "ETH",
+              "USDC",
+              "ENB",
+              "CUSTOM"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_address,t_array(t_uint256)dyn_storage)": {
+            "label": "mapping(address => uint256[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_enum(TokenType)4179)": {
+            "label": "mapping(address => enum BountyStorageLib.TokenType)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_array(t_address)dyn_storage)": {
+            "label": "mapping(uint256 => address[])",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_bool)": {
+            "label": "mapping(uint256 => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_mapping(t_address,t_bool))": {
+            "label": "mapping(uint256 => mapping(address => bool))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_mapping(t_uint256,t_uint256))": {
+            "label": "mapping(uint256 => mapping(uint256 => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_uint256)": {
+            "label": "mapping(uint256 => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_string_storage": {
+            "label": "string",
+            "numberOfBytes": "32"
+          },
+          "t_struct(Bounty)4205_storage": {
+            "label": "struct BountyStorageLib.Bounty",
+            "members": [
+              {
+                "label": "id",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "issuer",
+                "type": "t_address",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "name",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "description",
+                "type": "t_string_storage",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "amount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "createdAt",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "deadline",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "maxWinners",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "winnersCount",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "8"
+              },
+              {
+                "label": "cancelled",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "9"
+              },
+              {
+                "label": "tokenType",
+                "type": "t_enum(TokenType)4179",
+                "offset": 1,
+                "slot": "9"
+              },
+              {
+                "label": "tokenAddress",
+                "type": "t_address",
+                "offset": 2,
+                "slot": "9"
+              }
+            ],
+            "numberOfBytes": "320"
+          },
+          "t_struct(BountyStorage)4261_storage": {
+            "label": "struct BountyStorageLib.BountyStorage",
+            "members": [
+              {
+                "label": "bounties",
+                "type": "t_array(t_struct(Bounty)4205_storage)dyn_storage",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "bountyCounter",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "1"
+              },
+              {
+                "label": "reentrancyLock",
+                "type": "t_bool",
+                "offset": 0,
+                "slot": "2"
+              },
+              {
+                "label": "userBounties",
+                "type": "t_mapping(t_address,t_array(t_uint256)dyn_storage)",
+                "offset": 0,
+                "slot": "3"
+              },
+              {
+                "label": "bountyWinners",
+                "type": "t_mapping(t_uint256,t_array(t_address)dyn_storage)",
+                "offset": 0,
+                "slot": "4"
+              },
+              {
+                "label": "hasWon",
+                "type": "t_mapping(t_uint256,t_mapping(t_address,t_bool))",
+                "offset": 0,
+                "slot": "5"
+              },
+              {
+                "label": "supportedTokens",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "6"
+              },
+              {
+                "label": "tokenAddressTypes",
+                "type": "t_mapping(t_address,t_enum(TokenType)4179)",
+                "offset": 0,
+                "slot": "7"
+              },
+              {
+                "label": "platformFeeRate",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "8"
+              },
+              {
+                "label": "creationFeeRate",
+                "type": "t_uint256",
+                "offset": 0,
+                "slot": "9"
+              },
+              {
+                "label": "isPositionBased",
+                "type": "t_mapping(t_uint256,t_bool)",
+                "offset": 0,
+                "slot": "10"
+              },
+              {
+                "label": "bountyPositionAmounts",
+                "type": "t_mapping(t_uint256,t_mapping(t_uint256,t_uint256))",
+                "offset": 0,
+                "slot": "11"
+              },
+              {
+                "label": "bountyReviewPeriod",
+                "type": "t_mapping(t_uint256,t_uint256)",
+                "offset": 0,
+                "slot": "12"
+              },
+              {
+                "label": "__gap",
+                "type": "t_array(t_uint256)49_storage",
+                "offset": 0,
+                "slot": "13"
+              }
+            ],
+            "numberOfBytes": "1984"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    }
+  }
+}

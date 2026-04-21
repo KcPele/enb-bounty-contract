@@ -1,15 +1,16 @@
-import { run } from 'hardhat';
+import { run, upgrades } from 'hardhat';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
 /**
- * Verify ENBBounty contract on block explorer (e.g. BaseScan).
+ * Verify ENBBounty UUPS proxy on BaseScan.
  *
  * Usage:
- *   npx hardhat run scripts/verify.ts --network base \
- *     --ENBBounty <ENBBounty_address>
+ *   npx hardhat run scripts/verify.ts --network base -- --ENBBounty <proxy_address>
+ * Or set ENB_BOUNTY_ADDRESS in .env
  *
- * Or set the address in your .env file as ENB_BOUNTY_ADDRESS
+ * This verifies BOTH the implementation contract and the proxy contract.
+ * BaseScan auto-detects the proxy and links it to the implementation.
  */
 
 function getArg(name: string, fallback?: string): string {
@@ -24,28 +25,48 @@ function getArg(name: string, fallback?: string): string {
 }
 
 async function main() {
-  const treasury = process.env.TREASURY_ADDRESS;
-  if (!treasury) throw new Error('TREASURY_ADDRESS not set in .env');
+  const proxyAddress = getArg('ENBBounty', process.env.ENB_BOUNTY_ADDRESS);
+  const implAddress = await upgrades.erc1967.getImplementationAddress(
+    proxyAddress
+  );
 
-  const ENBBountyAddress = getArg('ENBBounty', process.env.ENB_BOUNTY_ADDRESS);
+  console.log('Verifying ENBBounty UUPS proxy:');
+  console.log(`  Proxy:          ${proxyAddress}`);
+  console.log(`  Implementation: ${implAddress}`);
 
-  console.log('Verifying ENBBounty at:', ENBBountyAddress);
-  console.log('Constructor arguments:');
-  console.log(`  Treasury: ${treasury}`);
-
+  // Verify implementation (no constructor args — initialize is used)
   try {
+    console.log('\n→ Verifying implementation...');
     await run('verify:verify', {
-      address: ENBBountyAddress,
-      constructorArguments: [treasury],
+      address: implAddress,
+      constructorArguments: [],
     });
-    console.log('ENBBounty verified successfully!');
+    console.log('  Implementation verified');
   } catch (error: any) {
     if (error.message.includes('Already Verified')) {
-      console.log('ENBBounty is already verified');
+      console.log('  Implementation already verified');
     } else {
-      console.error('Error verifying ENBBounty:', error);
+      console.error('  Error verifying implementation:', error.message);
     }
   }
+
+  // Verify proxy (ERC1967Proxy) — hardhat-upgrades plugin handles this
+  try {
+    console.log('\n→ Verifying proxy...');
+    await run('verify:verify', {
+      address: proxyAddress,
+      constructorArguments: [],
+    });
+    console.log('  Proxy verified');
+  } catch (error: any) {
+    if (error.message.includes('Already Verified')) {
+      console.log('  Proxy already verified');
+    } else {
+      console.error('  Error verifying proxy:', error.message);
+    }
+  }
+
+  console.log('\nDone. Visit BaseScan and use "More Options > Is this a proxy?" to link if not auto-detected.');
 }
 
 main().catch((error) => {

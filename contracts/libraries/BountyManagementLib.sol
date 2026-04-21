@@ -35,6 +35,7 @@ library BountyManagementLib {
 
     event CreationFeeCharged(uint256 bountyId, address payer, uint256 fee);
     event BountyCancelled(uint256 bountyId, address issuer);
+    event DeadlineExtended(uint256 indexed bountyId, uint256 oldDeadline, uint256 newDeadline);
 
     error NoEther();
     error BountyNotFound();
@@ -46,6 +47,8 @@ library BountyManagementLib {
     error ETHNotAllowedForPositionBounty();
     error PositionAmountsRequired();
     error PositionAmountsMismatch();
+    error BountyNotActive();
+    error InvalidExtension();
 
     function createBounty(
         BountyStorageLib.BountyStorage storage self,
@@ -53,6 +56,7 @@ library BountyManagementLib {
         string calldata description,
         uint256 maxWinners,
         uint256 durationInDays,
+        uint256 reviewPeriodInDays,
         uint256 msgValue,
         address msgSender,
         address treasury
@@ -64,6 +68,7 @@ library BountyManagementLib {
                 description,
                 maxWinners,
                 durationInDays,
+                reviewPeriodInDays,
                 address(0), // ETH
                 msgValue,
                 msgValue,
@@ -78,6 +83,7 @@ library BountyManagementLib {
         string calldata description,
         uint256 maxWinners,
         uint256 durationInDays,
+        uint256 reviewPeriodInDays,
         address tokenAddress,
         uint256 tokenAmount,
         uint256 msgValue,
@@ -161,6 +167,10 @@ library BountyManagementLib {
         self.userBounties[msgSender].push(bountyId);
         ++self.bountyCounter;
 
+        if (reviewPeriodInDays > 0) {
+            self.bountyReviewPeriod[bountyId] = reviewPeriodInDays * 1 days;
+        }
+
         emit TokenBountyCreated(
             bountyId,
             msgSender,
@@ -184,6 +194,7 @@ library BountyManagementLib {
         string calldata name,
         string calldata description,
         uint256 durationInDays,
+        uint256 reviewPeriodInDays,
         address tokenAddress,
         uint256 tokenAmount,
         uint256[] calldata positionAmounts,
@@ -251,6 +262,10 @@ library BountyManagementLib {
             self.bountyPositionAmounts[bountyId][i] = positionAmounts[i];
         }
 
+        if (reviewPeriodInDays > 0) {
+            self.bountyReviewPeriod[bountyId] = reviewPeriodInDays * 1 days;
+        }
+
         emit PositionBountyCreated(
             bountyId,
             msgSender,
@@ -302,5 +317,25 @@ library BountyManagementLib {
         }
 
         emit BountyCancelled(bountyId, bounty.issuer);
+    }
+
+    function extendDeadline(
+        BountyStorageLib.BountyStorage storage self,
+        uint256 bountyId,
+        uint256 additionalDays,
+        address msgSender
+    ) internal {
+        if (bountyId >= self.bountyCounter) revert BountyNotFound();
+        if (additionalDays == 0) revert InvalidExtension();
+
+        BountyStorageLib.Bounty storage bounty = self.bounties[bountyId];
+        if (bounty.cancelled) revert BountyClosed();
+        if (msgSender != bounty.issuer) revert WrongCaller();
+        if (block.timestamp > bounty.deadline) revert BountyNotActive();
+
+        uint256 oldDeadline = bounty.deadline;
+        bounty.deadline = oldDeadline + (additionalDays * 1 days);
+
+        emit DeadlineExtended(bountyId, oldDeadline, bounty.deadline);
     }
 }

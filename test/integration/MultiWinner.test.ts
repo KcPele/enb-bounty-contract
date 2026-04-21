@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { Contract } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 
 describe('ENBBounty - Multi-Winner Integration Tests', function () {
@@ -20,7 +20,7 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
     mockToken = await MockERC20.deploy('Mock Token', 'MTK', ethers.parseEther('1000000'));
 
     const ENBBounty = await ethers.getContractFactory('ENBBounty');
-    enbBounty = await ENBBounty.deploy(owner.address);
+    enbBounty = await upgrades.deployProxy(ENBBounty, [owner.address], { kind: 'uups' });
 
     await enbBounty.addSupportedToken(await mockToken.getAddress(), 1);
 
@@ -38,6 +38,7 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
         'Three winners allowed',
         maxWinners,
         30,
+        0,
         { value: bountyAmount }
       );
 
@@ -70,6 +71,7 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
         'Only 2 winners',
         2,
         30,
+        0,
         { value: ethers.parseEther('2') }
       );
 
@@ -90,6 +92,7 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
         'Description',
         3,
         30,
+        0,
         { value: ethers.parseEther('3') }
       );
 
@@ -113,6 +116,7 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
         'Description',
         3,
         30,
+        0,
         { value: ethers.parseEther('3') }
       );
 
@@ -141,6 +145,7 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
         await mockToken.getAddress(),
         tokenAmount,
         30,
+        0,
         { value: 0 }
       );
 
@@ -173,6 +178,7 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
         'Description',
         1,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 
@@ -197,6 +203,7 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
         'Description',
         maxWinners,
         30,
+        0,
         { value: bountyAmount }
       );
 
@@ -224,6 +231,7 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
         'Description',
         maxWinners,
         30,
+        0,
         { value: bountyAmount }
       );
 
@@ -258,6 +266,7 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
         'Description',
         maxWinners,
         30,
+        0,
         { value: bountyAmount }
       );
 
@@ -285,6 +294,7 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
         'Description',
         2,
         30,
+        0,
         { value: ethers.parseEther('2') }
       );
 
@@ -310,6 +320,7 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
         'Description',
         1,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 
@@ -324,6 +335,7 @@ describe('ENBBounty - Multi-Winner Integration Tests', function () {
         'Description',
         1,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 

@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { Contract } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 
 describe('ENBTaskRewards - Partner Tasks', function () {
@@ -88,7 +88,7 @@ describe('ENBTaskRewards - Partner Tasks', function () {
 
     // Deploy ENBBounty
     const ENBBounty = await ethers.getContractFactory('ENBBounty');
-    enbBounty = await ENBBounty.deploy(owner.address);
+    enbBounty = await upgrades.deployProxy(ENBBounty, [owner.address], { kind: 'uups' });
     await enbBounty.addSupportedToken(await mockToken.getAddress(), 2);
 
     // Deploy ENBTaskRewards

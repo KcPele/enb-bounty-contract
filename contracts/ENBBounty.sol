@@ -1,13 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+
 import './libraries/BountyStorageLib.sol';
 import './libraries/BountyManagementLib.sol';
 import './libraries/ClaimManagementLib.sol';
 import './libraries/BountyGettersLib.sol';
 import './libraries/TokenManagementLib.sol';
 
-contract ENBBounty {
+/**
+ * @title ENBBounty
+ * @notice UUPS-upgradeable bounty contract for the ENB platform.
+ *         Deployed behind an ERC1967 proxy.
+ */
+contract ENBBounty is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using BountyStorageLib for BountyStorageLib.BountyStorage;
     using BountyManagementLib for BountyStorageLib.BountyStorage;
     using ClaimManagementLib for BountyStorageLib.BountyStorage;
@@ -16,24 +25,58 @@ contract ENBBounty {
 
     BountyStorageLib.BountyStorage private bountyStorage;
 
-    address public immutable treasury;
+    address public treasury;
 
     // Fee management events
     event PlatformFeeUpdated(uint256 oldFee, uint256 newFee);
     event CreationFeeUpdated(uint256 oldFee, uint256 newFee);
     event CreationFeeCharged(uint256 bountyId, address payer, uint256 fee);
+    event TreasuryUpdated(address oldTreasury, address newTreasury);
+    event DeadlineExtended(uint256 indexed bountyId, uint256 oldDeadline, uint256 newDeadline);
 
-    constructor(address _treasury) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _treasury) external initializer {
+        require(_treasury != address(0), 'Invalid treasury');
+        __Ownable_init();
+        __UUPSUpgradeable_init();
+
         treasury = _treasury;
         bountyStorage.initializeStorage();
     }
 
+    // ──────────────────────────────────────────────
+    // UUPS: only owner can upgrade
+    // ──────────────────────────────────────────────
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
+
+    // ──────────────────────────────────────────────
+    // Treasury management
+    // ──────────────────────────────────────────────
+
+    function updateTreasury(address newTreasury) external onlyOwner {
+        require(newTreasury != address(0), 'Invalid treasury');
+        address old = treasury;
+        treasury = newTreasury;
+        emit TreasuryUpdated(old, newTreasury);
+    }
+
+    // ──────────────────────────────────────────────
     // Bounty Management Functions
+    // ──────────────────────────────────────────────
+
     function createSoloBounty(
         string calldata name,
         string calldata description,
         uint256 maxWinners,
-        uint256 durationInDays
+        uint256 durationInDays,
+        uint256 reviewPeriodInDays
     ) external payable {
         uint256 adjustedMaxWinners = maxWinners == 0 ? 1 : maxWinners;
         bountyStorage.createBounty(
@@ -41,6 +84,7 @@ contract ENBBounty {
             description,
             adjustedMaxWinners,
             durationInDays,
+            reviewPeriodInDays,
             msg.value,
             msg.sender,
             treasury
@@ -50,9 +94,19 @@ contract ENBBounty {
     function createSoloBounty(
         string calldata name,
         string calldata description,
-        uint256 durationInDays
+        uint256 durationInDays,
+        uint256 reviewPeriodInDays
     ) external payable {
-        bountyStorage.createBounty(name, description, 1, durationInDays, msg.value, msg.sender, treasury);
+        bountyStorage.createBounty(
+            name,
+            description,
+            1,
+            durationInDays,
+            reviewPeriodInDays,
+            msg.value,
+            msg.sender,
+            treasury
+        );
     }
 
     // Token Bounty Functions
@@ -62,7 +116,8 @@ contract ENBBounty {
         uint256 maxWinners,
         address tokenAddress,
         uint256 tokenAmount,
-        uint256 durationInDays
+        uint256 durationInDays,
+        uint256 reviewPeriodInDays
     ) external payable {
         uint256 adjustedMaxWinners = maxWinners == 0 ? 1 : maxWinners;
         bountyStorage.createTokenBounty(
@@ -70,6 +125,7 @@ contract ENBBounty {
             description,
             adjustedMaxWinners,
             durationInDays,
+            reviewPeriodInDays,
             tokenAddress,
             tokenAmount,
             msg.value,
@@ -84,12 +140,14 @@ contract ENBBounty {
         address tokenAddress,
         uint256 tokenAmount,
         uint256[] calldata positionAmounts,
-        uint256 durationInDays
+        uint256 durationInDays,
+        uint256 reviewPeriodInDays
     ) external payable {
         bountyStorage.createPositionBounty(
             name,
             description,
             durationInDays,
+            reviewPeriodInDays,
             tokenAddress,
             tokenAmount,
             positionAmounts,
@@ -103,7 +161,17 @@ contract ENBBounty {
         bountyStorage.cancelSoloBounty(bountyId, msg.sender);
     }
 
+    function extendDeadline(
+        uint256 bountyId,
+        uint256 additionalDays
+    ) external {
+        bountyStorage.extendDeadline(bountyId, additionalDays, msg.sender);
+    }
+
+    // ──────────────────────────────────────────────
     // Claim Management Functions
+    // ──────────────────────────────────────────────
+
     function acceptClaim(uint256 bountyId, address claimer) external {
         bountyStorage.acceptClaim(treasury, bountyId, claimer, msg.sender);
     }
@@ -120,7 +188,10 @@ contract ENBBounty {
         );
     }
 
+    // ──────────────────────────────────────────────
     // Getter Functions
+    // ──────────────────────────────────────────────
+
     function getBountiesLength() public view returns (uint256) {
         return bountyStorage.getBountiesLength();
     }
@@ -213,7 +284,9 @@ contract ENBBounty {
     }
 
     // Position-based bounty view functions
-    function isBountyPositionBased(uint256 bountyId) external view returns (bool) {
+    function isBountyPositionBased(
+        uint256 bountyId
+    ) external view returns (bool) {
         require(bountyId < bountyStorage.bountyCounter, 'Bounty not found');
         return bountyStorage.isPositionBased[bountyId];
     }
@@ -236,11 +309,35 @@ contract ENBBounty {
         }
     }
 
-    // Token Management Functions (Owner only)
-    modifier onlyOwner() {
-        require(msg.sender == treasury, 'Not authorized');
-        _;
+    // ──────────────────────────────────────────────
+    // Review period & status views
+    // ──────────────────────────────────────────────
+
+    function getBountyReviewPeriod(
+        uint256 bountyId
+    ) external view returns (uint256) {
+        require(bountyId < bountyStorage.bountyCounter, 'Bounty not found');
+        return bountyStorage.bountyReviewPeriod[bountyId];
     }
+
+    /// @notice Returns bounty status: 0=active, 1=inReview, 2=ended, 3=cancelled
+    function getBountyStatus(
+        uint256 bountyId
+    ) external view returns (uint8) {
+        require(bountyId < bountyStorage.bountyCounter, 'Bounty not found');
+        BountyStorageLib.Bounty memory bounty = bountyStorage.bounties[bountyId];
+        if (bounty.cancelled) return 3;
+        if (bounty.winnersCount >= bounty.maxWinners) return 2;
+        if (block.timestamp <= bounty.deadline) return 0;
+        uint256 reviewEnd = bounty.deadline +
+            bountyStorage.bountyReviewPeriod[bountyId];
+        if (block.timestamp <= reviewEnd) return 1;
+        return 2;
+    }
+
+    // ──────────────────────────────────────────────
+    // Token Management Functions (Owner only)
+    // ──────────────────────────────────────────────
 
     function addSupportedToken(
         address tokenAddress,
@@ -294,7 +391,10 @@ contract ENBBounty {
         return TokenManagementLib.getTokenTypeName(tokenType);
     }
 
+    // ──────────────────────────────────────────────
     // Fee Management Functions (Owner only)
+    // ──────────────────────────────────────────────
+
     function updatePlatformFee(uint256 newFee) external onlyOwner {
         require(newFee <= 250, 'Fee exceeds 25% cap');
         uint256 oldFee = bountyStorage.platformFeeRate;

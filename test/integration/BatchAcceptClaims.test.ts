@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { Contract } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 
 describe('ENBBounty - Batch Accept Claims', function () {
@@ -26,7 +26,7 @@ describe('ENBBounty - Batch Accept Claims', function () {
     );
 
     const ENBBounty = await ethers.getContractFactory('ENBBounty');
-    enbBounty = await ENBBounty.deploy(owner.address);
+    enbBounty = await upgrades.deployProxy(ENBBounty, [owner.address], { kind: 'uups' });
 
     await enbBounty.addSupportedToken(await mockToken.getAddress(), 1);
     await mockToken.transfer(alice.address, ethers.parseEther('100000'));
@@ -42,6 +42,7 @@ describe('ENBBounty - Batch Accept Claims', function () {
       'Testing batch accept',
       maxWinners,
       30,
+      0,
       { value: bountyAmount },
     );
   }
@@ -87,6 +88,7 @@ describe('ENBBounty - Batch Accept Claims', function () {
         'Testing max batch',
         numClaimers,
         30,
+        0,
         { value: ethers.parseEther('10') },
       );
 
@@ -158,6 +160,7 @@ describe('ENBBounty - Batch Accept Claims', function () {
         await mockToken.getAddress(),
         tokenAmount,
         30,
+        0,
         { value: 0 },
       );
 
@@ -237,6 +240,7 @@ describe('ENBBounty - Batch Accept Claims', function () {
         'Description',
         15,
         30,
+        0,
         { value: ethers.parseEther('15') },
       );
 
@@ -278,6 +282,7 @@ describe('ENBBounty - Batch Accept Claims', function () {
         'Description',
         5,
         30,
+        0,
         { value: ethers.parseEther('5') },
       );
 
@@ -343,6 +348,7 @@ describe('ENBBounty - Batch Accept Claims', function () {
         'Description',
         numClaimers,
         30,
+        0,
         { value: bountyAmount },
       );
 
@@ -360,6 +366,7 @@ describe('ENBBounty - Batch Accept Claims', function () {
         'Description',
         numClaimers,
         30,
+        0,
         { value: bountyAmount },
       );
 

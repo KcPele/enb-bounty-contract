@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { Contract } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 
 describe('ENBBounty - Position Bounty Cancellation', function () {
@@ -26,7 +26,7 @@ describe('ENBBounty - Position Bounty Cancellation', function () {
     mockToken = await MockERC20.deploy('Mock Token', 'MTK', ethers.parseEther('1000000'));
 
     const ENBBounty = await ethers.getContractFactory('ENBBounty');
-    enbBounty = await ENBBounty.deploy(owner.address);
+    enbBounty = await upgrades.deployProxy(ENBBounty, [owner.address], { kind: 'uups' });
 
     await enbBounty.addSupportedToken(await mockToken.getAddress(), 1);
     await mockToken.transfer(alice.address, ethers.parseEther('100000'));
@@ -39,7 +39,8 @@ describe('ENBBounty - Position Bounty Cancellation', function () {
       await mockToken.getAddress(),
       tokenAmount,
       positions,
-      30
+      30,
+      0
     );
   });
 
@@ -91,7 +92,7 @@ describe('ENBBounty - Position Bounty Cancellation', function () {
   it('Should still refund correctly for equal-split bounties (regression)', async function () {
     // Create a regular ETH bounty with 3 winners
     const ethAmount = ethers.parseEther('3');
-    await enbBounty.connect(alice).createSoloBounty('Regular', 'Desc', 3, 30, {
+    await enbBounty.connect(alice).createSoloBounty('Regular', 'Desc', 3, 30, 0, {
       value: ethAmount,
     });
 

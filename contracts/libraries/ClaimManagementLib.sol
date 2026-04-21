@@ -39,7 +39,7 @@ library ClaimManagementLib {
     error BatchSizeInvalid();
     error ReentrancyGuard();
     error BatchExceedsMaxWinners();
-    error DeadlinePassed();
+    // DeadlinePassed removed — owner can accept claims after deadline (review period)
 
     function acceptClaim(
         BountyStorageLib.BountyStorage storage self,
@@ -52,7 +52,6 @@ library ClaimManagementLib {
 
         BountyStorageLib.Bounty storage bounty = self.bounties[bountyId];
         if (bounty.cancelled) revert BountyClosed();
-        if (block.timestamp > bounty.deadline) revert DeadlinePassed();
         if (bounty.winnersCount >= bounty.maxWinners) revert BountyClaimed();
         if (msgSender != bounty.issuer) revert WrongCaller();
         if (claimer == address(0) || claimer == bounty.issuer)
@@ -117,7 +116,6 @@ library ClaimManagementLib {
 
         BountyStorageLib.Bounty storage bounty = self.bounties[bountyId];
         if (bounty.cancelled) revert BountyClosed();
-        if (block.timestamp > bounty.deadline) revert DeadlinePassed();
         if (bounty.winnersCount >= bounty.maxWinners) revert BountyClaimed();
         if (bounty.winnersCount + claimers.length > bounty.maxWinners)
             revert BatchExceedsMaxWinners();

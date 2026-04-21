@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { Contract } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 
 describe('ENBBounty - Position Bounty Creation', function () {
@@ -17,7 +17,7 @@ describe('ENBBounty - Position Bounty Creation', function () {
     mockToken = await MockERC20.deploy('Mock Token', 'MTK', ethers.parseEther('1000000'));
 
     const ENBBounty = await ethers.getContractFactory('ENBBounty');
-    enbBounty = await ENBBounty.deploy(owner.address);
+    enbBounty = await upgrades.deployProxy(ENBBounty, [owner.address], { kind: 'uups' });
 
     await enbBounty.addSupportedToken(await mockToken.getAddress(), 1); // USDC type
 
@@ -42,7 +42,8 @@ describe('ENBBounty - Position Bounty Creation', function () {
         await mockToken.getAddress(),
         tokenAmount,
         positions,
-        30
+        30,
+        0
       );
 
       expect(await enbBounty.isBountyPositionBased(0)).to.be.true;
@@ -71,7 +72,8 @@ describe('ENBBounty - Position Bounty Creation', function () {
         await mockToken.getAddress(),
         tokenAmount,
         positions,
-        30
+        30,
+        0
       );
       const receipt = await tx.wait();
 
@@ -100,7 +102,8 @@ describe('ENBBounty - Position Bounty Creation', function () {
         await mockToken.getAddress(),
         tokenAmount,
         positions,
-        30
+        30,
+        0
       );
       const treasuryAfter = await mockToken.balanceOf(owner.address);
 
@@ -108,7 +111,7 @@ describe('ENBBounty - Position Bounty Creation', function () {
     });
 
     it('Should return false for non-position bounties', async function () {
-      await enbBounty.connect(alice).createSoloBounty('Normal', 'Desc', 1, 30, {
+      await enbBounty.connect(alice).createSoloBounty('Normal', 'Desc', 1, 30, 0, {
         value: ethers.parseEther('1'),
       });
 
@@ -128,7 +131,8 @@ describe('ENBBounty - Position Bounty Creation', function () {
         await mockToken.getAddress(),
         tokenAmount,
         positions,
-        30
+        30,
+        0
       );
 
       expect(await enbBounty.getBountyPositionAmount(0, 0)).to.equal(positions[0]);
@@ -151,7 +155,8 @@ describe('ENBBounty - Position Bounty Creation', function () {
           await mockToken.getAddress(),
           tokenAmount,
           positions,
-          30
+          30,
+          0
         )
       ).to.be.revertedWithCustomError(enbBounty, 'PositionAmountsMismatch');
     });
@@ -165,6 +170,7 @@ describe('ENBBounty - Position Bounty Creation', function () {
           ethers.parseEther('1'),
           [ethers.parseEther('0.6'), ethers.parseEther('0.4')],
           30,
+          0,
           { value: ethers.parseEther('1') }
         )
       ).to.be.revertedWithCustomError(enbBounty, 'ETHNotAllowedForPositionBounty');
@@ -178,7 +184,8 @@ describe('ENBBounty - Position Bounty Creation', function () {
           await mockToken.getAddress(),
           ethers.parseEther('1000'),
           [],
-          30
+          30,
+          0
         )
       ).to.be.revertedWithCustomError(enbBounty, 'PositionAmountsRequired');
     });
@@ -197,7 +204,8 @@ describe('ENBBounty - Position Bounty Creation', function () {
           await mockToken.getAddress(),
           tokenAmount,
           positions,
-          30
+          30,
+          0
         )
       ).to.be.revertedWith('Position amount must be > 0');
     });
@@ -216,6 +224,7 @@ describe('ENBBounty - Position Bounty Creation', function () {
           await mockToken.getAddress(),
           tokenAmount,
           positions,
+          0,
           0
         )
       ).to.be.revertedWithCustomError(enbBounty, 'InvalidDuration');

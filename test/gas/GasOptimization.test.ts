@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { Contract } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 
 describe('ENBBounty - Gas Optimization Tests', function () {
@@ -18,7 +18,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
     mockToken = await MockERC20.deploy('Mock Token', 'MTK', ethers.parseEther('1000000'));
 
     const ENBBounty = await ethers.getContractFactory('ENBBounty');
-    enbBounty = await ENBBounty.deploy(owner.address);
+    enbBounty = await upgrades.deployProxy(ENBBounty, [owner.address], { kind: 'uups' });
 
     await enbBounty.addSupportedToken(await mockToken.getAddress(), 1);
   });
@@ -30,6 +30,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
         'Description',
         1,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 
@@ -45,6 +46,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
         'Description',
         1,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 
@@ -66,6 +68,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
           'Description',
           1,
           30,
+          0,
           { value: ethers.parseEther('1') }
         );
         const receipt = await tx.wait();
@@ -77,6 +80,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
         'Description',
         3,
         30,
+        0,
         { value: ethers.parseEther('3') }
       );
       const multiReceipt = await multiTx.wait();
@@ -94,7 +98,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
 
       // Sequential
       await enbBounty.connect(alice).createSoloBounty(
-        'Seq Bounty', 'Desc', numClaims, 30, { value: bountyAmount }
+        'Seq Bounty', 'Desc', numClaims, 30, 0, { value: bountyAmount }
       );
       let seqGas = 0n;
       for (let i = 0; i < numClaims; i++) {
@@ -106,7 +110,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
 
       // Batch
       await enbBounty.connect(alice).createSoloBounty(
-        'Bat Bounty', 'Desc', numClaims, 30, { value: bountyAmount }
+        'Bat Bounty', 'Desc', numClaims, 30, 0, { value: bountyAmount }
       );
       const claimerAddresses = signers.slice(4, 4 + numClaims).map((s) => s.address);
       const batchTx = await enbBounty.connect(alice).batchAcceptClaims(1, claimerAddresses);
@@ -128,6 +132,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
           `Description ${i}`,
           1,
           30,
+          0,
           { value: ethers.parseEther('0.01') }
         );
       }
@@ -155,6 +160,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
         'Description',
         1,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
       const ethReceipt = await ethTx.wait();
@@ -168,6 +174,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
         await mockToken.getAddress(),
         ethers.parseEther('100'),
         30,
+        0,
         { value: 0 }
       );
       const tokenReceipt = await tokenTx.wait();
@@ -188,6 +195,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
         await mockToken.getAddress(),
         ethers.parseEther('100'),
         30,
+        0,
         { value: 0 }
       );
 
@@ -206,6 +214,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
         'Description',
         1,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 
@@ -224,6 +233,7 @@ describe('ENBBounty - Gas Optimization Tests', function () {
         'Long Description '.repeat(50),
         1,
         30,
+        0,
         { value: ethers.parseEther('1') }
       );
 

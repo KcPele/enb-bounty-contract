@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers';
 import { Contract } from 'ethers';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { expect } from 'chai';
 
 describe('ENBBounty - Position Claim Acceptance', function () {
@@ -26,7 +26,7 @@ describe('ENBBounty - Position Claim Acceptance', function () {
     mockToken = await MockERC20.deploy('Mock Token', 'MTK', ethers.parseEther('1000000'));
 
     const ENBBounty = await ethers.getContractFactory('ENBBounty');
-    enbBounty = await ENBBounty.deploy(owner.address);
+    enbBounty = await upgrades.deployProxy(ENBBounty, [owner.address], { kind: 'uups' });
 
     await enbBounty.addSupportedToken(await mockToken.getAddress(), 1);
     await mockToken.transfer(alice.address, ethers.parseEther('100000'));
@@ -40,7 +40,8 @@ describe('ENBBounty - Position Claim Acceptance', function () {
       await mockToken.getAddress(),
       tokenAmount,
       positions,
-      30
+      30,
+      0
     );
   });
 
@@ -165,6 +166,7 @@ describe('ENBBounty - Position Claim Acceptance', function () {
         await mockToken.getAddress(),
         amount,
         30,
+        0,
         { value: 0 }
       );
 
